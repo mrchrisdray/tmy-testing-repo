@@ -1,2 +1,2 @@
-# tmy-testing-repo
+# my-testing-repo
 experimental repo for random testing
