@@ -1,0 +1,75 @@
+name: Team Management
+on:
+  push:
+    paths:
+      - 'teams.yml'
+  workflow_dispatch:
+  workflow_call:
+
+jobs:
+  manage-teams:
+    runs-on: ubuntu-latest
+    environment: 
+      name: cloud-platform
+
+    steps:
+      - uses: actions/create-github-app-token@v1
+        id: app-token
+        with:
+          app-id: ${{ vars.APP_ID }}
+          private-key: ${{ secrets.APP_KEY }}
+          owner: ${{ github.repository_owner }}
+
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install PyYAML PyGithub gitpython
+
+      - name: Parent teams remove
+        env:
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
+          GITHUB_ORGANIZATION: ${{ github.repository_owner }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          python .github/scripts/team_manage_parent_teams.py
+
+      - name: Parent teams setup
+        id: setup-team
+        env:
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
+          GITHUB_ORGANIZATION: ${{ github.repository_owner }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          python .github/scripts/team_setup_teams.py
+
+      - name: Sync teams members
+        if: steps.setup-team.outputs.exit_code == 0
+        env:
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
+          GITHUB_ORGANIZATION: ${{ github.repository_owner }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_EVENT_BEFORE: ${{ github.event.before }}
+          GITHUB_SHA: ${{ github.sha }}
+          GITHUB_API_EVENT: "api-push"
+        run: |
+          python .github/scripts/team_manage_membership.py
+
+      - name: Sync teams resource
+        if: steps.setup-team.outputs.exit_code == 0
+        env:
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
+          GITHUB_ORGANIZATION: ${{ github.repository_owner }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_EVENT_BEFORE: ${{ github.workflow_sha }}
+          GITHUB_SHA: ${{ github.sha }}
+          GITHUB_API_EVENT: "api-push"
+        run: |
+          python .github/scripts/team_manage_resource.py
