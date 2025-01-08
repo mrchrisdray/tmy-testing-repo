@@ -1,0 +1,41 @@
+---
+name: Setup Team Configuration
+description: Setup parent Team configuration and creates all the child and team structur and access to default Repositories.
+labels:
+  - team_setup
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to fill out this request! <br>
+        Make sure the following are created as part of the issue to create the team. <br>
+        - Issue has the correct label team_setup to trigger the workflow. 
+        - The Team Name is required, to create a new team.
+        - Project required to be the name of the project.
+        - Description to describe the team/Project bring setup.
+        - Members is optional use @mention to make sure the user has access to GitHub already. This will add members in the parent team. 
+        - Repositories list of default repositoriesfor the team to have access to.
+        - Repository Permissions for the parent team this will be left as read. Default child teams will be setup with different required access. <br>
+        <br>
+        Example :-<br>
+        Expected format:<br>
+        Team Name: Team-Name <br>
+        Project: Name of the Project <br>       
+        Description: Description of the team and project <br>
+        Members: @User1 , @User2 <br>
+        Repositories: repo-name-one, repo-name-two, repo-name-three <br>
+        Repository Permissions: read
+  - type: textarea
+    attributes:
+      label: Setup team Configuration
+      description: Create configuration files to setup a new parent team. This will make the team and ink them to default repositories and add members to the parent team. Fill in the labels below.
+      value: |
+        Expected format:
+        Team Name: 
+        Project: 
+        Description: 
+        Members: 
+        Repositories: 
+        Repository Permissions: read 
+    validations:
+      required: true
