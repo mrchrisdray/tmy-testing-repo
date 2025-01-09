@@ -1,0 +1,324 @@
+# GitHub Release Management Process
+[Previous sections remain the same until Automation Requirements...]
+
+## Automation Requirements
+
+### Generic CI/CD Pipeline Structure
+```yaml
+name: Release Testing Pipeline
+on:
+  push:
+    branches: 
+      - 'release/*'
+      - 'hotfix/*'
+  pull_request:
+    branches: 
+      - 'main'
+      - 'develop'
+
+jobs:
+  code-quality:
+    name: Code Quality Checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      # Dynamic language detection and setup
+      - name: Detect Project Type
+        id: project-type
+        run: |
+          if [ -f "package.json" ]; then
+            echo "type=node" >> $GITHUB_OUTPUT
+          elif [ -f "requirements.txt" ]; then
+            echo "type=python" >> $GITHUB_OUTPUT
+          elif [ -f "pom.xml" ]; then
+            echo "type=java" >> $GITHUB_OUTPUT
+          elif [ -f "go.mod" ]; then
+            echo "type=go" >> $GITHUB_OUTPUT
+          fi
+
+      # Language-specific setup
+      - name: Setup Environment
+        uses: ./.github/actions/setup-${{ steps.project-type.outputs.type }}
+        if: steps.project-type.outputs.type != ''
+
+      # Linting (examples for different languages)
+      - name: Lint Code
+        run: |
+          if [ "${{ steps.project-type.outputs.type }}" = "node" ]; then
+            npm run lint
+          elif [ "${{ steps.project-type.outputs.type }}" = "python" ]; then
+            flake8 .
+          elif [ "${{ steps.project-type.outputs.type }}" = "java" ]; then
+            ./mvnw checkstyle:check
+          elif [ "${{ steps.project-type.outputs.type }}" = "go" ]; then
+            golangci-lint run
+          fi
+
+  security-scan:
+    name: Security Scanning
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      # SAST Scanning
+      - name: Run SAST
+        uses: github/codeql-action/analyze@v2
+        
+      # Dependency Scanning
+      - name: Check Dependencies
+        uses: snyk/actions/node@master
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+
+  unit-tests:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        # Define test configurations based on needs
+        config: ['default']  # Can be expanded to test different versions/configurations
+    steps:
+      - uses: actions/checkout@v3
+
+      # Reusable test execution
+      - name: Run Tests
+        uses: ./.github/actions/run-tests
+        with:
+          config: ${{ matrix.config }}
+          
+  integration-tests:
+    name: Integration Tests
+    needs: unit-tests
+    runs-on: ubuntu-latest
+    services:
+      # Define required services (databases, message queues, etc.)
+      postgres:
+        image: postgres:latest
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Run Integration Tests
+        uses: ./.github/actions/run-integration-tests
+        
+  performance-tests:
+    name: Performance Tests
+    needs: integration-tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Run Performance Tests
+        uses: ./.github/actions/run-performance-tests
+        with:
+          threshold: ${{ vars.PERF_THRESHOLD }}
+
+  build:
+    name: Build and Package
+    needs: [code-quality, security-scan, integration-tests]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Build Project
+        uses: ./.github/actions/build
+        
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: build-artifacts
+          path: dist/
+
+# Example of reusable test action (.github/actions/run-tests/action.yml)
+```
+
+### Reusable Test Action Template
+```yaml
+# .github/actions/run-tests/action.yml
+name: 'Run Tests'
+description: 'Reusable action for running tests'
+inputs:
+  config:
+    description: 'Test configuration to use'
+    required: false
+    default: 'default'
+  coverage-threshold:
+    description: 'Minimum coverage threshold'
+    required: false
+    default: '80'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup Test Environment
+      shell: bash
+      run: |
+        # Dynamic setup based on detected project type
+        if [ -f "package.json" ]; then
+          npm ci
+          npm run test:setup
+        elif [ -f "requirements.txt" ]; then
+          python -m pip install -r requirements.txt
+          python -m pip install pytest pytest-cov
+        elif [ -f "pom.xml" ]; then
+          ./mvnw test-compile
+        fi
+
+    - name: Run Tests with Coverage
+      shell: bash
+      run: |
+        if [ -f "package.json" ]; then
+          npm run test:coverage -- --coverageThreshold=${{ inputs.coverage-threshold }}
+        elif [ -f "requirements.txt" ]; then
+          pytest --cov=. --cov-fail-under=${{ inputs.coverage-threshold }}
+        elif [ -f "pom.xml" ]; then
+          ./mvnw verify
+        fi
+
+    - name: Process Test Results
+      shell: bash
+      run: |
+        # Process and store test results
+        mkdir -p test-results
+        if [ -f "package.json" ]; then
+          cp coverage/coverage-final.json test-results/
+        elif [ -f "requirements.txt" ]; then
+          cp .coverage test-results/
+        elif [ -f "pom.xml" ]; then
+          cp target/site/jacoco/jacoco.xml test-results/
+        fi
+```
+
+### Build Configuration Template
+```yaml
+# .github/actions/build/action.yml
+name: 'Build Project'
+description: 'Reusable action for building projects'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Detect Build Type
+      id: build-type
+      shell: bash
+      run: |
+        if [ -f "package.json" ]; then
+          echo "type=node" >> $GITHUB_OUTPUT
+        elif [ -f "requirements.txt" ]; then
+          echo "type=python" >> $GITHUB_OUTPUT
+        elif [ -f "pom.xml" ]; then
+          echo "type=java" >> $GITHUB_OUTPUT
+        elif [ -f "go.mod" ]; then
+          echo "type=go" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Build
+      shell: bash
+      run: |
+        case "${{ steps.build-type.outputs.type }}" in
+          "node")
+            npm ci
+            npm run build
+            ;;
+          "python")
+            python -m pip install build
+            python -m build
+            ;;
+          "java")
+            ./mvnw package
+            ;;
+          "go")
+            go build -v ./...
+            ;;
+          *)
+            echo "Unknown project type"
+            exit 1
+            ;;
+        esac
+
+    - name: Run Post-Build Checks
+      shell: bash
+      run: |
+        # Verify build artifacts
+        if [ ! -d "dist" ] && [ ! -d "target" ] && [ ! -d "build" ]; then
+          echo "No build artifacts found"
+          exit 1
+        fi
+```
+
+### Test Result Processing Script
+```python
+#!/usr/bin/env python3
+# test_processor.py
+
+import json
+import sys
+from pathlib import Path
+
+def process_test_results(results_dir):
+    """Process test results from various testing frameworks."""
+    results_dir = Path(results_dir)
+    
+    # Initialize metrics
+    metrics = {
+        'total_tests': 0,
+        'passed_tests': 0,
+        'failed_tests': 0,
+        'coverage': 0.0,
+        'duration': 0.0
+    }
+    
+    # Process Jest (Node.js) results
+    jest_results = results_dir / 'coverage-final.json'
+    if jest_results.exists():
+        with jest_results.open() as f:
+            data = json.load(f)
+            metrics['coverage'] = calculate_coverage(data)
+    
+    # Process pytest results
+    pytest_results = results_dir / '.coverage'
+    if pytest_results.exists():
+        # Parse pytest coverage data
+        pass
+    
+    # Process JUnit results
+    junit_results = results_dir / 'jacoco.xml'
+    if junit_results.exists():
+        # Parse JUnit test results
+        pass
+    
+    return metrics
+
+def calculate_coverage(coverage_data):
+    """Calculate overall code coverage percentage."""
+    total_statements = 0
+    covered_statements = 0
+    
+    for file_data in coverage_data.values():
+        if 'statementMap' in file_data:
+            total_statements += len(file_data['statementMap'])
+            for statement_id, covered in file_data['s'].items():
+                if covered > 0:
+                    covered_statements += 1
+    
+    return (covered_statements / total_statements * 100) if total_statements > 0 else 0
+
+if __name__ == '__main__':
+    if len(sys.argv) != 2:
+        print("Usage: test_processor.py <results_directory>")
+        sys.exit(1)
+    
+    metrics = process_test_results(sys.argv[1])
+    print(json.dumps(metrics, indent=2))
+```
+
+[Rest of the document remains the same...]
