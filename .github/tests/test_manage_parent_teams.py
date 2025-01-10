@@ -102,4 +102,85 @@ def test_delete_team_directory(tmp_path):
     assert result is True
     assert not team_dir.exists()
 
-def test_delete_team_dir
+def test_delete_team_directory_not_exists(tmp_path):
+    """Test deleting non-existent team directory"""
+    result = delete_team_directory(tmp_path, "nonexistent_team")
+    assert result is False
+
+def test_delete_github_team(mock_github):
+    """Test deleting GitHub team"""
+    mock_gh, mock_org, mock_team, mock_sub_team = mock_github
+    
+    result = delete_github_team(mock_org, "team1")
+    assert result is True
+    mock_sub_team.delete.assert_called_once()
+    mock_team.delete.assert_called_once()
+
+def test_delete_github_team_error(mock_github):
+    """Test deleting GitHub team with error"""
+    mock_gh, mock_org, mock_team, mock_sub_team = mock_github
+    mock_org.get_team_by_slug.side_effect = Exception("Team not found")
+    
+    result = delete_github_team(mock_org, "nonexistent_team")
+    assert result is False
+
+@patch('os.environ', {'GITHUB_TOKEN': 'fake-token', 'GITHUB_ORGANIZATION': 'fake-org'})
+@patch('git.Repo')
+@patch('github.Github')
+def test_main_success(mock_github_class, mock_repo_class, mock_repo, tmp_path):
+    """Test main function - successful execution"""
+    # Setup mocks
+    mock_github_class.return_value = Mock()
+    mock_repo_class.return_value = mock_repo
+    
+    # Create test directory structure
+    teams_dir = tmp_path / "teams"
+    teams_dir.mkdir()
+    (teams_dir / "team3").mkdir()  # Team to be removed
+    
+    # Create test config
+    config = """
+    teams:
+      - team_name: team1
+      - team_name: team2
+    """
+    
+    with patch('builtins.open', mock_open(read_data=config)):
+        with patch('pathlib.Path.exists', return_value=True):
+            main()
+            
+            # Verify commit was made
+            mock_repo.index.commit.assert_called_once()
+            mock_repo.remote().push.assert_called_once()
+
+@patch('os.environ', {})
+def test_main_missing_env_vars():
+    """Test main function with missing environment variables"""
+    with pytest.raises(KeyError):
+        main()
+
+def test_commit_changes(mock_repo):
+    """Test committing changes"""
+    deleted_teams = ["team1"]
+    commit_message = "Remove teams: team1"
+    
+    commit_changes(Path("/fake/repo/path"), commit_message, deleted_teams)
+    
+    # Verify Git operations were called
+    mock_repo.git.add.assert_called()
+    mock_repo.index.commit.assert_called_with(commit_message)
+    mock_repo.remote().push.assert_called_once()
+
+def test_commit_changes_no_changes(mock_repo):
+    """Test commit_changes when there are no changes"""
+    mock_repo.is_dirty.return_value = False
+    mock_repo.untracked_files = []
+    
+    commit_changes(Path("/fake/repo/path"), "No changes", [])
+    
+    # Verify no commit was made
+    mock_repo.index.commit.assert_not_called()
+    mock_repo.remote().push.assert_not_called()
+
+if __name__ == "__main__":
+    pytest.main(["-v"])
