@@ -1,151 +1,162 @@
-import pytest
-from unittest.mock import Mock, patch, mock_open
+import os
 from pathlib import Path
+import shutil
+import yaml
+from github import Github
 import git
-from github import Github, Organization, Team
 from git.exc import InvalidGitRepositoryError
 
-# Import the functions to test
-from your_script import (
-    load_yaml_config,
-    find_git_root,
-    get_existing_team_directories,
-    get_configured_teams,
-    delete_team_directory,
-    delete_github_team,
-    commit_changes,
-    main
-)
 
-# Sample test data
-SAMPLE_CONFIG = """
-teams:
-  - team_name: team1
-  - team_name: team2
-"""
+def load_yaml_config(file_path):
+    """Load YAML configuration file."""
+    with open(file_path, mode="r", encoding="utf-8") as file:
+        return yaml.safe_load(file)
 
-@pytest.fixture
-def mock_repo():
-    """Fixture for mocking Git repository"""
-    mock = Mock(spec=git.Repo)
-    mock.working_dir = "/fake/repo/path"
-    mock.is_dirty.return_value = True
-    mock.untracked_files = []
-    mock.remotes = [Mock(name="origin")]
-    return mock
 
-@pytest.fixture
-def mock_github():
-    """Fixture for mocking GitHub API"""
-    mock = Mock(spec=Github)
-    mock_org = Mock(spec=Organization.Organization)
-    mock_team = Mock(spec=Team.Team)
-    mock_sub_team = Mock(spec=Team.Team)
-    
-    # Setup the mock chain
-    mock.get_organization.return_value = mock_org
-    mock_org.get_team_by_slug.return_value = mock_team
-    mock_team.get_teams.return_value = [mock_sub_team]
-    
-    return mock, mock_org, mock_team, mock_sub_team
+def find_git_root():
+    """Find the Git repository root directory."""
+    try:
+        repo = git.Repo(os.getcwd(), search_parent_directories=True)
+        return Path(repo.working_dir)
+    except InvalidGitRepositoryError as exc:
+        raise InvalidGitRepositoryError("No Git repository found in current directory or it parents") from exc
 
-def test_load_yaml_config():
-    """Test loading YAML configuration"""
-    with patch('builtins.open', mock_open(read_data=SAMPLE_CONFIG)):
-        config = load_yaml_config('dummy_path')
-        assert 'teams' in config
-        assert len(config['teams']) == 2
-        assert config['teams'][0]['team_name'] == 'team1'
 
-def test_find_git_root_success(mock_repo):
-    """Test finding Git root directory - success case"""
-    with patch('git.Repo', return_value=mock_repo):
-        root = find_git_root()
-        assert str(root) == "/fake/repo/path"
+def get_existing_team_directories(repo_root):
+    """Get list of existing team directories."""
+    teams_dir = repo_root / "teams"
+    if not teams_dir.exists():
+        return []
+    return [d.name for d in teams_dir.iterdir() if d.is_dir()]
 
-def test_find_git_root_failure():
-    """Test finding Git root directory - failure case"""
-    with patch('git.Repo', side_effect=InvalidGitRepositoryError):
-        with pytest.raises(InvalidGitRepositoryError):
-            find_git_root()
 
-def test_get_existing_team_directories(tmp_path):
-    """Test getting existing team directories"""
-    # Create test directory structure
-    teams_dir = tmp_path / "teams"
-    teams_dir.mkdir()
-    (teams_dir / "team1").mkdir()
-    (teams_dir / "team2").mkdir()
-    
-    with patch('pathlib.Path.exists', return_value=True):
-        result = get_existing_team_directories(tmp_path)
-        assert sorted(result) == ["team1", "team2"]
+def get_configured_teams(config_file):
+    """Get list of teams from configuration file."""
+    config = load_yaml_config(config_file)
+    return [team["team_name"] for team in config.get("teams", [])]
 
-def test_get_configured_teams():
-    """Test getting configured teams from config file"""
-    with patch('builtins.open', mock_open(read_data=SAMPLE_CONFIG)):
-        teams = get_configured_teams('dummy_path')
-        assert teams == ["team1", "team2"]
 
-def test_delete_team_directory(tmp_path):
-    """Test deleting team directory"""
-    # Setup test directory
-    team_dir = tmp_path / "teams" / "team1"
-    team_dir.mkdir(parents=True)
-    
-    result = delete_team_directory(tmp_path, "team1")
-    assert result is True
-    assert not team_dir.exists()
+def delete_team_directory(repo_root, team_name):
+    """Delete team directory and it configuration file."""
+    team_dir = repo_root / "teams" / team_name
+    if team_dir.exists():
+        try:
+            shutil.rmtree(team_dir)
+            print(f"Deleted team directory {team_dir}")
+            return True
+        except Exception as e:
+            print(f"Error deleteing team directory {team_dir}: {str(e)}")
+            return False
+    return False
 
-def test_delete_github_team(mock_github):
-    """Test deleting GitHub team"""
-    mock_gh, mock_org, mock_team, mock_sub_team = mock_github
-    
-    result = delete_github_team(mock_org, "team1")
-    assert result is True
-    mock_sub_team.delete.assert_called_once()
-    mock_team.delete.assert_called_once()
 
-@patch('os.environ', {'GITHUB_TOKEN': 'fake-token', 'GITHUB_ORGANIZATION': 'fake-org'})
-@patch('git.Repo')
-@patch('github.Github')
-def test_main_success(mock_github_class, mock_repo_class, mock_repo, tmp_path):
-    """Test main function - successful execution"""
-    # Setup mocks
-    mock_github_class.return_value = Mock()
-    mock_repo_class.return_value = mock_repo
-    
-    # Create test directory structure
-    teams_dir = tmp_path / "teams"
-    teams_dir.mkdir()
-    (teams_dir / "team3").mkdir()  # Team to be removed
-    
-    # Create test config
-    config = """
-    teams:
-      - team_name: team1
-      - team_name: team2
-    """
-    
-    with patch('builtins.open', mock_open(read_data=config)):
-        with patch('pathlib.Path.exists', return_value=True):
-            main()
-            
-            # Verify commit was made
-            mock_repo.index.commit.assert_called_once()
-            mock_repo.remote().push.assert_called_once()
+def delete_github_team(gh_org, team_name):
+    """Delete GitHub team and its sub-teams."""
+    try:
+        team = gh_org.get_team_by_slug(team_name)
 
-def test_commit_changes(mock_repo):
-    """Test committing changes"""
-    deleted_teams = ["team1"]
-    commit_message = "Remove teams: team1"
-    
-    commit_changes(Path("/fake/repo/path"), commit_message, deleted_teams)
-    
-    # Verify Git operations were called
-    mock_repo.git.add.assert_called()
-    mock_repo.index.commit.assert_called_with(commit_message)
-    mock_repo.remote().push.assert_called_once()
+        # First, delete all sub-teams
+        sub_teams = team.get_teams()
+        for sub_team in sub_teams:
+            try:
+                sub_team.delete()
+                print(f"Deleted sub-team: {sub_team.name}")
+            except Exception as e:
+                print(f"Error deleting sub-team {sub_team.name}: {str(e)}")
+
+        # Delete the parent team
+        team.delete()
+        print(f"Deleted parent team: {team_name}")
+        return True
+    except Exception as e:
+        print(f"Error deleting GitHub team {team_name}: {str(e)}")
+        return False
+
+
+def commit_changes(repo_root, commit_message, deleted_teams):
+    """Commit chnages to the repository."""
+    try:
+        repo = git.Repo(repo_root)
+
+        # Added all chnages including deletions
+        repo.git.add(update=True)
+        repo.git.add(".")
+
+        # Explicitly remove deleted team directories
+        for team in deleted_teams:
+            team_path = repo_root / "teams" / team
+            if team_path.exists():
+                repo.git.rm("-r", str(team_path))
+
+        # Only commit if there are chnages
+        if repo.is_dirty() or len(repo.untracked_files) > 0:
+            repo.index.commit(commit_message)
+
+            # Push if remote exists
+            if "origin" in [remote.name for remote in repo.remotes]:
+                repo.remote("origin").push()
+                print("Changes committed and pushed to the repository.")
+            else:
+                print("Changes committed locally. No remote repository found for pushing.")
+        else:
+            print("No changes to commit.")
+
+    except Exception as e:
+        print(f"Error during commit: {str(e)}")
+        raise
+
+
+def main():
+    try:
+        # Find Git repository root
+        repo_root = find_git_root()
+        print(f"Git repository root: {repo_root}")
+
+        # Intialize GitHub client
+        github_token = os.environ["GITHUB_TOKEN"]
+        org_name = os.environ["GITHUB_ORGANIZATION"]
+
+        gh = Github(github_token)
+        org = gh.get_organization(org_name)
+
+        # Load root configuration
+        config_path = repo_root / "teams.yml"
+
+        # Get existing teams from directories and configuration
+        existing_teams = get_existing_team_directories(repo_root)
+        configured_teams = get_configured_teams(config_path)
+
+        # Find teams that exist but are not in configuration
+        teams_to_remove = set(existing_teams) - set(configured_teams)
+
+        if not teams_to_remove:
+            print("No teams to remove.")
+            return
+        print(f"Teams to remove: {teams_to_remove}")
+
+        # Process each team to remove
+        deleted_teams = []
+        for team_name in teams_to_remove:
+            print(f"\nProcessing removal of teams: {team_name}")
+
+            # Delete GitHub team and its sub-teams
+            if delete_github_team(org, team_name):
+                # If GitHub deletion successfuly, delete local directory
+                if delete_team_directory(repo_root, team_name):
+                    deleted_teams.append(team_name)
+
+        if deleted_teams:
+            # Commit chnages to the repository
+            commit_message = f"Remove teams: {','.join(deleted_teams)}"
+            commit_changes(repo_root, commit_message, deleted_teams)
+            print(f"\nSuccessfully removed teams: {deleted_teams}")
+        else:
+            print("\nNo teams were successfully removed.")
+
+    except Exception as e:
+        print(f"Error in main execution: {str(e)}")
+        raise
+
 
 if __name__ == "__main__":
-    pytest.main(["-v"])
+    main()
