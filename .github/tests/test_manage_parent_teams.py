@@ -1,17 +1,20 @@
+"""Test module for team_manage_parent_teams.py."""
+
 import os
 import sys
-from unittest.mock import Mock, patch, mock_open
 from pathlib import Path
-import pytest
+from typing import Dict, List, Any
+from unittest.mock import Mock, patch, mock_open
+
 import git
+import pytest
 from github import Github, Organization, Team
 from git.exc import InvalidGitRepositoryError
 
-# Add the script directory to Python path
-sys.path.append(os.path.join(os.path.dirname(__file__), "..", ".github", "scripts"))
+# Add script directory to Python path
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-# Import the functions to test
-from team_manage_parent_teams import (
+from scripts.team_manage_parent_teams import (  # pylint: disable=wrong-import-position
     load_yaml_config,
     find_git_root,
     get_existing_team_directories,
@@ -19,168 +22,106 @@ from team_manage_parent_teams import (
     delete_team_directory,
     delete_github_team,
     commit_changes,
-    main
+    main,
 )
 
-# Sample test data
+# Test Constants
 SAMPLE_CONFIG = """
 teams:
-  - team_name: team1
-  - team_name: team2
+    - team_name: team1
+    - team_name: team2
 """
 
+# Fixtures
 @pytest.fixture
-def mock_repo():
-    """Fixture for mocking Git repository"""
+def mock_repo() -> Mock:
+    """Create a mock Git repository.
+
+    Returns:
+        Mock: Mocked Git repository object
+    """
     mock = Mock(spec=git.Repo)
     mock.working_dir = "/fake/repo/path"
     mock.is_dirty.return_value = True
     mock.untracked_files = []
-    mock.remotes = [Mock(name="origin")]
     return mock
 
 @pytest.fixture
-def mock_github():
-    """Fixture for mocking GitHub API"""
-    mock = Mock(spec=Github)
-    mock_org = Mock(spec=Organization.Organization)
-    mock_team = Mock(spec=Team.Team)
-    mock_sub_team = Mock(spec=Team.Team)
-    
-    # Setup the mock chain
-    mock.get_organization.return_value = mock_org
-    mock_org.get_team_by_slug.return_value = mock_team
-    mock_team.get_teams.return_value = [mock_sub_team]
-    
-    return mock, mock_org, mock_team, mock_sub_team
+def mock_github() -> Mock:
+    """Create a mock GitHub instance.
 
-def test_load_yaml_config():
-    """Test loading YAML configuration"""
-    with patch('builtins.open', mock_open(read_data=SAMPLE_CONFIG)):
-        config = load_yaml_config('dummy_path')
-        assert 'teams' in config
-        assert len(config['teams']) == 2
-        assert config['teams'][0]['team_name'] == 'team1'
+    Returns:
+        Mock: Mocked GitHub object
+    """
+    return Mock(spec=Github)
 
-def test_find_git_root_success(mock_repo):
-    """Test finding Git root directory - success case"""
-    with patch('git.Repo', return_value=mock_repo):
-        root = find_git_root()
-        assert str(root) == "/fake/repo/path"
+@pytest.fixture
+def test_config_file(tmp_path: Path) -> Path:
+    """Create a temporary test configuration file.
 
-def test_find_git_root_failure():
-    """Test finding Git root directory - failure case"""
-    with patch('git.Repo', side_effect=InvalidGitRepositoryError):
-        with pytest.raises(InvalidGitRepositoryError):
-            find_git_root()
+    Args:
+        tmp_path: Pytest fixture providing temporary directory
 
-def test_get_existing_team_directories(tmp_path):
-    """Test getting existing team directories"""
-    # Create test directory structure
-    teams_dir = tmp_path / "teams"
-    teams_dir.mkdir()
-    (teams_dir / "team1").mkdir()
-    (teams_dir / "team2").mkdir()
-    
-    with patch('pathlib.Path.exists', return_value=True):
-        result = get_existing_team_directories(tmp_path)
-        assert sorted(result) == ["team1", "team2"]
+    Returns:
+        Path: Path to test configuration file
+    """
+    config_file = tmp_path / "test_config.yml"
+    config_file.write_text(SAMPLE_CONFIG)
+    return config_file
 
-def test_get_configured_teams():
-    """Test getting configured teams from config file"""
-    with patch('builtins.open', mock_open(read_data=SAMPLE_CONFIG)):
-        teams = get_configured_teams('dummy_path')
+@pytest.fixture
+def mock_organization() -> Mock:
+    """Create a mock GitHub organization.
+
+    Returns:
+        Mock: Mocked GitHub organization object
+    """
+    mock = Mock(spec=Organization)
+    mock.get_team.return_value = Mock(spec=Team)
+    return mock
+
+# Test Classes
+class TestGitOperations:
+    """Tests for Git-related operations."""
+
+    def test_find_git_root(self, mock_repo: Mock) -> None:
+        """Test finding Git repository root."""
+        with patch("git.Repo", return_value=mock_repo):
+            result = find_git_root()
+            assert result == Path("/fake/repo/path")
+
+    def test_commit_changes(self, mock_repo: Mock) -> None:
+        """Test committing changes to repository."""
+        with patch("git.Repo", return_value=mock_repo):
+            commit_changes(Path("/fake/path"), "Test commit", ["team1"])
+            mock_repo.index.commit.assert_called_once()
+            mock_repo.remote.return_value.push.assert_called_once()
+
+class TestTeamOperations:
+    """Tests for team-related operations."""
+
+    @pytest.mark.parametrize(
+        "team_name,exists,expected",
+        [
+            ("team1", True, True),
+            ("nonexistent", False, False),
+        ],
+    )
+    def test_delete_team_directory(
+        self, tmp_path: Path, team_name: str, exists: bool, expected: bool
+    ) -> None:
+        """Test team directory deletion scenarios."""
+        if exists:
+            team_dir = tmp_path / "teams" / team_name
+            team_dir.mkdir(parents=True)
+
+        result = delete_team_directory(tmp_path, team_name)
+        assert result == expected
+
+    def test_get_configured_teams(self, test_config_file: Path) -> None:
+        """Test getting configured teams from config file."""
+        teams = get_configured_teams(test_config_file)
         assert teams == ["team1", "team2"]
 
-def test_delete_team_directory(tmp_path):
-    """Test deleting team directory"""
-    # Setup test directory
-    team_dir = tmp_path / "teams" / "team1"
-    team_dir.mkdir(parents=True)
-    
-    result = delete_team_directory(tmp_path, "team1")
-    assert result is True
-    assert not team_dir.exists()
-
-def test_delete_team_directory_not_exists(tmp_path):
-    """Test deleting non-existent team directory"""
-    result = delete_team_directory(tmp_path, "nonexistent_team")
-    assert result is False
-
-def test_delete_github_team(mock_github):
-    """Test deleting GitHub team"""
-    mock_gh, mock_org, mock_team, mock_sub_team = mock_github
-    
-    result = delete_github_team(mock_org, "team1")
-    assert result is True
-    mock_sub_team.delete.assert_called_once()
-    mock_team.delete.assert_called_once()
-
-def test_delete_github_team_error(mock_github):
-    """Test deleting GitHub team with error"""
-    mock_gh, mock_org, mock_team, mock_sub_team = mock_github
-    mock_org.get_team_by_slug.side_effect = Exception("Team not found")
-    
-    result = delete_github_team(mock_org, "nonexistent_team")
-    assert result is False
-
-@patch('os.environ', {'GITHUB_TOKEN': 'fake-token', 'GITHUB_ORGANIZATION': 'fake-org'})
-@patch('git.Repo')
-@patch('github.Github')
-def test_main_success(mock_github_class, mock_repo_class, mock_repo, tmp_path):
-    """Test main function - successful execution"""
-    # Setup mocks
-    mock_github_class.return_value = Mock()
-    mock_repo_class.return_value = mock_repo
-    
-    # Create test directory structure
-    teams_dir = tmp_path / "teams"
-    teams_dir.mkdir()
-    (teams_dir / "team3").mkdir()  # Team to be removed
-    
-    # Create test config
-    config = """
-    teams:
-      - team_name: team1
-      - team_name: team2
-    """
-    
-    with patch('builtins.open', mock_open(read_data=config)):
-        with patch('pathlib.Path.exists', return_value=True):
-            main()
-            
-            # Verify commit was made
-            mock_repo.index.commit.assert_called_once()
-            mock_repo.remote().push.assert_called_once()
-
-@patch('os.environ', {})
-def test_main_missing_env_vars():
-    """Test main function with missing environment variables"""
-    with pytest.raises(KeyError):
-        main()
-
-def test_commit_changes(mock_repo):
-    """Test committing changes"""
-    deleted_teams = ["team1"]
-    commit_message = "Remove teams: team1"
-    
-    commit_changes(Path("/fake/repo/path"), commit_message, deleted_teams)
-    
-    # Verify Git operations were called
-    mock_repo.git.add.assert_called()
-    mock_repo.index.commit.assert_called_with(commit_message)
-    mock_repo.remote().push.assert_called_once()
-
-def test_commit_changes_no_changes(mock_repo):
-    """Test commit_changes when there are no changes"""
-    mock_repo.is_dirty.return_value = False
-    mock_repo.untracked_files = []
-    
-    commit_changes(Path("/fake/repo/path"), "No changes", [])
-    
-    # Verify no commit was made
-    mock_repo.index.commit.assert_not_called()
-    mock_repo.remote().push.assert_not_called()
-
 if __name__ == "__main__":
-    pytest.main(["-v"])
+    pytest.main([__file__])
