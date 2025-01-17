@@ -52,10 +52,10 @@ def mock_repo() -> Mock:
     # Setup remote operations
     mock_remote = Mock()
     mock_remote.push = Mock()
-    mock.remote = Mock(return_value=mock_remote)
+    mock.remote = mock_remote
     
     # Make iterable for git operations
-    mock.__iter__ = Mock(return_value=iter([]))
+    mock.__iter__ = iter([])
     
     return mock
 
