@@ -35,25 +35,27 @@ teams:
 # Fixtures
 @pytest.fixture
 def mock_repo() -> Mock:
-    """Create a mock Git repository."""
+    """Create a mock Git repository configuration."""
     mock = Mock(spec=git.Repo)
+    
+    # Setup basic attributes
     mock.working_dir = "/fake/repo/path"
     mock.is_dirty.return_value = True
+    mock.untracked_files = []
     
-    # Setup index
+    # Setup index operations
     mock_index = Mock()
     mock_index.add = Mock()
     mock_index.commit = Mock()
     mock.index = mock_index
     
-    # Setup remote
+    # Setup remote operations
     mock_remote = Mock()
     mock_remote.push = Mock()
     mock.remote = Mock(return_value=mock_remote)
     
     # Make iterable for git operations
     mock.__iter__ = Mock(return_value=iter([]))
-    mock.untracked_files = []
     
     return mock
 
@@ -103,12 +105,15 @@ class TestGitOperations:
 
     def test_commit_changes(self, mock_repo: Mock) -> None:
         """Test committing changes to repository."""
+        teams = ["team1"]
+        commit_msg = "Test commit"
+        
         with patch("git.Repo", return_value=mock_repo):
-            commit_changes(Path("/fake/path"), "Test commit", ["team1"])
+            commit_changes(Path("/fake/path"), commit_msg, teams)
             
             # Verify git operations
             mock_repo.index.add.assert_called_once()
-            mock_repo.index.commit.assert_called_once_with("Test commit")
+            mock_repo.index.commit.assert_called_once_with(commit_msg)
             mock_repo.remote.return_value.push.assert_called_once()
 
 class TestTeamOperations:
