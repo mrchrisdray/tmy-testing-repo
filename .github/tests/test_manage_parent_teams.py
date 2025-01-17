@@ -35,15 +35,26 @@ teams:
 # Fixtures
 @pytest.fixture
 def mock_repo() -> Mock:
-    """Create a mock Git repository.
-
-    Returns:
-        Mock: Mocked Git repository object
-    """
+    """Create a mock Git repository."""
     mock = Mock(spec=git.Repo)
     mock.working_dir = "/fake/repo/path"
     mock.is_dirty.return_value = True
+    
+    # Setup index
+    mock_index = Mock()
+    mock_index.add = Mock()
+    mock_index.commit = Mock()
+    mock.index = mock_index
+    
+    # Setup remote
+    mock_remote = Mock()
+    mock_remote.push = Mock()
+    mock.remote = Mock(return_value=mock_remote)
+    
+    # Make iterable for git operations
+    mock.__iter__ = Mock(return_value=iter([]))
     mock.untracked_files = []
+    
     return mock
 
 @pytest.fixture
@@ -94,7 +105,10 @@ class TestGitOperations:
         """Test committing changes to repository."""
         with patch("git.Repo", return_value=mock_repo):
             commit_changes(Path("/fake/path"), "Test commit", ["team1"])
-            mock_repo.index.commit.assert_called_once()
+            
+            # Verify git operations
+            mock_repo.index.add.assert_called_once()
+            mock_repo.index.commit.assert_called_once_with("Test commit")
             mock_repo.remote.return_value.push.assert_called_once()
 
 class TestTeamOperations:
