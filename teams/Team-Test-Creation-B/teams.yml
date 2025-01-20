@@ -1,0 +1,51 @@
+teams:
+  team_name: Team-Test-Creation-B
+  description: Github test team creation B setup.
+  project: Beta-TEAM
+  repository_permission: read
+  members: null
+  repositories:
+    - my-testing-repo
+  default_sub_teams:
+    - name: Team-Test-Creation-B-developers
+      description: Developers for Beta-TEAM
+      members: []
+      repositories:
+        - my-testing-repo
+      repository_permissions: write
+    - name: Team-Test-Creation-B-testers
+      description: Testers for Beta-TEAM
+      members: []
+      repositories:
+        - my-testing-repo
+      repository_permissions: triage
+    - name: Team-Test-Creation-B-reviewers
+      description: Code reviewers for Beta-TEAM
+      members: []
+      repositories:
+        - my-testing-repo
+      repository_permissions: write
+    - name: Team-Test-Creation-B-release-managers
+      description: Staging/Production release management for Beta-TEAM
+      members: []
+      repositories:
+        - my-testing-repo
+      repository_permissions: maintain
+    - name: Team-Test-Creation-B-operations
+      description: Operations for Beta-TEAM
+      members: []
+      repositories:
+        - my-testing-repo
+      repository_permissions: maintain
+    - name: Team-Test-Creation-B-security
+      description: Security for Beta-TEAM
+      members: []
+      repositories:
+        - my-testing-repo
+      repository_permissions: admin
+    - name: Team-Test-Creation-B-project-owners
+      description: Owners for Beta-TEAM
+      members: []
+      repositories:
+        - my-testing-repo
+      repository_permissions: admin
