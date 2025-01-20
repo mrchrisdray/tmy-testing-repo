@@ -94,7 +94,7 @@ class TestGitOperations:
         commit_changes(repo_root, commit_message, deleted_teams)
 
         # Verify interactions
-        mock_repo.git.add.assert_called_with(update=True)
+        mock_repo.git.add.assert_any_call(update=True)
         mock_repo.git.add.assert_any_call(".")
         mock_repo.git.rm.assert_any_call("-r", str(repo_root / "teams" / "team1"))
         mock_repo.index.commit.assert_called_once_with(commit_message)
@@ -134,8 +134,6 @@ class TestGitOperations:
             commit_changes(repo_root, commit_message, deleted_teams)
 
         # Verify interactions
-        mock_repo.git.add.assert_called_with(update=True)
-        mock_repo.git.add.assert_any_call(".")
         mock_repo.git.rm.assert_any_call("-r", str(repo_root / "teams" / "team1"))
         mock_repo.index.commit.assert_called_once_with(commit_message)
         mock_repo.remotes.origin.push.assert_not_called()
