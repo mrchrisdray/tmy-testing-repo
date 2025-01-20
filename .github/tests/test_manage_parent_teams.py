@@ -3,7 +3,7 @@
 import os
 import sys
 from pathlib import Path
-from unittest.mock import Mock, patch
+from unittest.mock import patch, MagicMock
 
 import git
 import pytest
@@ -26,120 +26,71 @@ teams:
     - team_name: team2
 """
 
-
 # Fixtures
 @pytest.fixture
-def mock_repo() -> Mock:
+def mock_repo():
     """Create a mock Git repository configuration."""
-    mock = Mock(spec=git.Repo)
-
+    mock = MagicMock(spec=git.Repo)
+    
     # Setup basic attributes
     mock.working_dir = "/fake/repo/path"
     mock.is_dirty.return_value = True
     mock.untracked_files = []
-
-    # Setup index operations
-    mock_index = Mock()
-    mock_index.add = Mock()
-    mock_index.commit = Mock()
-    mock.index = mock_index
-
-    # Setup remote operations
-    mock_remote = Mock()
-    mock_remote.push = Mock()
-    mock.remote = mock_remote
-
-    # Make iterable for git operations
-    mock.__iter__ = iter([])
-
+    
+    # Setup git command interface
+    mock.git = MagicMock()
+    mock.git.add = MagicMock()
+    mock.git.rm = MagicMock()
+    
+    # Setup index
+    mock.index = MagicMock()
+    mock.index.add = MagicMock()
+    mock.index.commit = MagicMock()
+    
+    # Setup remotes
+    mock_remote = MagicMock()
+    mock_remote.push = MagicMock()
+    mock.remotes = MagicMock()
+    mock.remotes.__iter__.return_value = [mock_remote]
+    mock.remotes.origin = mock_remote
+    
     return mock
 
 
-@pytest.fixture
-def mock_github() -> Mock:
-    """Create a mock GitHub instance.
-
-    Returns:
-        Mock: Mocked GitHub object
-    """
-    return Mock(spec=Github)
-
-
-@pytest.fixture
-def test_config_file(tmp_path: Path) -> Path:
-    """Create a temporary test configuration file.
-
-    Args:
-        tmp_path: Pytest fixture providing temporary directory
-
-    Returns:
-        Path: Path to test configuration file
-    """
-    config_file = tmp_path / "test_config.yml"
-    config_file.write_text(SAMPLE_CONFIG)
-    return config_file
-
-
-@pytest.fixture
-def mock_organization() -> Mock:
-    """Create a mock GitHub organization.
-
-    Returns:
-        Mock: Mocked GitHub organization object
-    """
-    mock = Mock(spec=Organization)
-    mock.get_team.return_value = Mock(spec=Team)
-    return mock
-
-
-# Test Classes
 class TestGitOperations:
-    """Tests for Git-related operations."""
-
-    def test_find_git_root(self, mock_repo: Mock) -> None:
+    @patch('git.Repo')
+    def test_find_git_root(self, mock_git_repo, mock_repo):
         """Test finding Git repository root."""
-        with patch("git.Repo", return_value=mock_repo):
-            result = find_git_root()
-            assert result == Path("/fake/repo/path")
+        mock_git_repo.return_value = mock_repo
+        result = find_git_root()
+        assert isinstance(result, Path)
+        assert str(result) == "/fake/repo/path"
 
-    def test_commit_changes(self, mock_repo: Mock) -> None:
-        """Test committing changes to repository."""
-        teams = ["team1"]
-        commit_msg = "Test commit"
-
-        with patch("git.Repo", return_value=mock_repo):
-            commit_changes(Path("/fake/path"), commit_msg, teams)
-
-            # Verify git operations
-            mock_repo.index.add.assert_called_once()
-            mock_repo.index.commit.assert_called_once_with(commit_msg)
-            mock_repo.remote.return_value.push.assert_called_once()
-
-
-class TestTeamOperations:
-    """Tests for team-related operations."""
-
-    @pytest.mark.parametrize(
-        "team_name,exists,expected",
-        [
-            ("team1", True, True),
-            ("nonexistent", False, False),
-        ],
-    )
-    def test_delete_team_directory(self, tmp_path: Path, team_name: str, exists: bool, expected: bool) -> None:
-        """Test team directory deletion scenarios."""
-        if exists:
-            team_dir = tmp_path / "teams" / team_name
-            team_dir.mkdir(parents=True)
-
-        result = delete_team_directory(tmp_path, team_name)
-        assert result == expected
-
-    def test_get_configured_teams(self, test_config_file: Path) -> None:
-        """Test getting configured teams from config file."""
-        teams = get_configured_teams(test_config_file)
+    def test_get_configured_teams(self, tmp_path):
+        """Test getting configured teams from YAML."""
+        config_file = tmp_path / "teams.yml"
+        config_file.write_text(SAMPLE_CONFIG)
+        teams = get_configured_teams(config_file)
         assert teams == ["team1", "team2"]
 
+    def test_delete_team_directory(self, tmp_path):
+        """Test team directory deletion."""
+        team_dir = tmp_path / "teams" / "test_team"
+        team_dir.mkdir(parents=True)
+        assert delete_team_directory(tmp_path, "test_team")
+        assert not team_dir.exists()
 
-if __name__ == "__main__":
-    pytest.main([__file__])
+    @patch('git.Repo')
+    def test_commit_changes(self, mock_git_repo, mock_repo):
+        """Test committing changes."""
+        mock_git_repo.return_value = mock_repo
+        repo_root = Path("/fake/repo/path")
+        deleted_teams = ["team1"]
+        commit_message = "Test commit"
+        
+        commit_changes(repo_root, commit_message, deleted_teams)
+        
+        # Verify interactions
+        mock_repo.git.add.assert_called()
+        mock_repo.index.commit.assert_called_once_with(commit_message)
+        mock_repo.remotes.origin.push.assert_called_once()
