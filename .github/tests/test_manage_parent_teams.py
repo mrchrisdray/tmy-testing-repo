@@ -3,26 +3,20 @@
 import os
 import sys
 from pathlib import Path
-from typing import Dict, List, Any
-from unittest.mock import Mock, patch, mock_open
+from unittest.mock import Mock, patch
 
 import git
 import pytest
 from github import Github, Organization, Team
-from git.exc import InvalidGitRepositoryError
 
 # Add script directory to Python path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from scripts.team_manage_parent_teams import (  # pylint: disable=wrong-import-position
-    load_yaml_config,
     find_git_root,
-    get_existing_team_directories,
     get_configured_teams,
     delete_team_directory,
-    delete_github_team,
     commit_changes,
-    main,
 )
 
 # Test Constants

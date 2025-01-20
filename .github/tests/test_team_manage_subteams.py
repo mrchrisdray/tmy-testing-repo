@@ -1,8 +1,8 @@
 from unittest.mock import MagicMock
 from pathlib import Path
 import logging
-from github import GithubException
 import tempfile
+from github import GithubException
 import pytest
 
 from team_manage_subteams import setup_logging, get_modified_team_files, get_all_team_files

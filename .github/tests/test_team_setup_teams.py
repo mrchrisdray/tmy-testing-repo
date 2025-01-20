@@ -24,7 +24,7 @@ def default_sub_teams():
 def test_load_yaml_config(temp_repo_root):
     config_path = temp_repo_root / "test_config.yml"
     test_data = {"test": "data"}
-    with open(config_path, "w") as f:
+    with open(config_path, mode="w", encoding="utf-8") as f:
         yaml.dump(test_data, f)
 
     result = load_yaml_config(config_path)

@@ -1,11 +1,17 @@
+import os
+import sys
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 import shutil
 from pathlib import Path
+import tempfile
 import yaml
 import pytest
 
-from team_manage_membership import (
+# Add script directory to Python path
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from script.team_manage_membership import (
     normalize_username,
     get_all_team_files,
     load_team_config,
@@ -82,7 +88,7 @@ def test_load_team_config(temp_dir):
     config_path = Path(temp_dir) / "teams.yml"
     test_config = {"teams": {"name": "test-team", "members": ["user1", "user2"]}}
 
-    with open(config_path, "w") as f:
+    with open(config_path, mode="w", encoding="utf-8") as f:
         yaml.dump(test_config, f)
 
     result = load_team_config(config_path)
