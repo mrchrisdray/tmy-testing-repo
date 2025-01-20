@@ -35,16 +35,16 @@ default_sub_teams:
     repositories: null
     repository_permissions: admin
 teams:
-  - team_name: Team-A
-    description: Github team A setup.
+  - team_name: Team-Test-Creation-A
+    description: Github test team creation A setup.
     project: A-TEAM
     members:
     default_repositories:
       - my-testing-repo
     repository_permissions: read
-  - team_name: Team-B
-    description: Github team B setup.
-    project: B-TEAM
+  - team_name: Team-Test-Creation-B
+    description: Github test team creation B setup.
+    project: Beta-TEAM
     members:
     default_repositories:
       - my-testing-repo
