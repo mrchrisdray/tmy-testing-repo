@@ -7,7 +7,6 @@ from unittest.mock import patch, MagicMock
 
 import git
 import pytest
-from github import Github, Organization, Team
 
 # Add script directory to Python path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
