@@ -1,3 +1,5 @@
+import os
+import sys
 from unittest.mock import MagicMock
 from pathlib import Path
 import logging
@@ -5,7 +7,10 @@ import tempfile
 from github import GithubException
 import pytest
 
-from team_manage_subteams import setup_logging, get_modified_team_files, get_all_team_files
+# Add script directory to Python path
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from scripts.team_manage_subteams import setup_logging, get_modified_team_files, get_all_team_files
 
 
 @pytest.fixture

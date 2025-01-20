@@ -1,7 +1,12 @@
+import os
+import sys
 import yaml
 import pytest
 
-from team_setup_teams import load_yaml_config, create_team_directory, IndentDumper
+# Add script directory to Python path
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from scripts.team_setup_teams import load_yaml_config, create_team_directory, IndentDumper
 
 
 @pytest.fixture

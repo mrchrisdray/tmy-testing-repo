@@ -10,7 +10,7 @@ import pytest
 # Add script directory to Python path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from script.team_manage_membership import (
+from scripts.team_manage_membership import (
     normalize_username,
     get_all_team_files,
     load_team_config,
