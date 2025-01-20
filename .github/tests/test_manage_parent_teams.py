@@ -26,39 +26,40 @@ teams:
     - team_name: team2
 """
 
+
 # Fixtures
 @pytest.fixture
 def mock_repo():
     """Create a mock Git repository configuration."""
     mock = MagicMock(spec=git.Repo)
-    
+
     # Setup basic attributes
     mock.working_dir = "/fake/repo/path"
     mock.is_dirty.return_value = True
     mock.untracked_files = []
-    
+
     # Setup git command interface
     mock.git = MagicMock()
     mock.git.add = MagicMock()
     mock.git.rm = MagicMock()
-    
+
     # Setup index
     mock.index = MagicMock()
     mock.index.add = MagicMock()
     mock.index.commit = MagicMock()
-    
+
     # Setup remotes
     mock_remote = MagicMock()
     mock_remote.push = MagicMock()
     mock.remotes = MagicMock()
     mock.remotes.__iter__.return_value = [mock_remote]
     mock.remotes.origin = mock_remote
-    
+
     return mock
 
 
 class TestGitOperations:
-    @patch('git.Repo')
+    @patch("git.Repo")
     def test_find_git_root(self, mock_git_repo, mock_repo):
         """Test finding Git repository root."""
         mock_git_repo.return_value = mock_repo
@@ -80,16 +81,16 @@ class TestGitOperations:
         assert delete_team_directory(tmp_path, "test_team")
         assert not team_dir.exists()
 
-    @patch('git.Repo')
+    @patch("git.Repo")
     def test_commit_changes(self, mock_git_repo, mock_repo):
         """Test committing changes."""
         mock_git_repo.return_value = mock_repo
         repo_root = Path("/fake/repo/path")
         deleted_teams = ["team1"]
         commit_message = "Test commit"
-        
+
         commit_changes(repo_root, commit_message, deleted_teams)
-        
+
         # Verify interactions
         mock_repo.git.add.assert_called()
         mock_repo.index.commit.assert_called_once_with(commit_message)
