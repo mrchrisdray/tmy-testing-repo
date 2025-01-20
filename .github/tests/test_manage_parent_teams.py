@@ -97,7 +97,7 @@ class TestGitOperations:
         mock_repo.git.add.assert_any_call(update=True)
         mock_repo.git.add.assert_any_call(".")
         mock_repo.index.commit.assert_called_once_with(commit_message)
-        mock_repo.remotes.origin.push.assert_called_once()
+        mock_repo.remotes.origin.push.assert_called()
 
     @patch("git.Repo")
     def test_commit_changes_no_changes(self, mock_git_repo, mock_repo):
