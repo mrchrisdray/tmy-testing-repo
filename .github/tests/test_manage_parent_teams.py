@@ -100,7 +100,7 @@ class TestGitOperations:
         mock_repo.index.commit.assert_called_once_with(commit_message)
         mock_repo.remotes.origin.push.assert_called_once()
 
-    @patch('git.Repo')
+    @patch("git.Repo")
     def test_commit_changes_no_changes(self, mock_git_repo, mock_repo):
         """Test committing changes with no changes in the repository."""
         mock_git_repo.return_value = mock_repo
@@ -119,7 +119,7 @@ class TestGitOperations:
         mock_repo.index.commit.assert_not_called()
         mock_repo.remotes.origin.push.assert_not_called()
 
-    @patch('git.Repo')
+    @patch("git.Repo")
     def test_commit_changes_exception(self, mock_git_repo, mock_repo):
         """Test committing changes with an exception."""
         mock_git_repo.return_value = mock_repo
