@@ -90,7 +90,6 @@ class TestGitOperations:
         commit_changes(repo_root, commit_message, deleted_teams)
 
         # Verify interactions
-        mock_repo.git.add.assert_called_with(".")
         mock_repo.git.add.assert_any_call(".")
         mock_repo.index.commit.assert_called_once_with(commit_message)
         mock_repo.remotes.origin.push.assert_called_once()
