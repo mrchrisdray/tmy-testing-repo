@@ -5,6 +5,9 @@ on:
       - 'teams.yml'
   workflow_dispatch:
   workflow_call:
+    
+permissions:
+  contents: write
 
 jobs:
   manage-teams:
