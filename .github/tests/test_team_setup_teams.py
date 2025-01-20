@@ -1,8 +1,6 @@
-import pytest
-from pathlib import Path
 import yaml
-from unittest.mock import patch, MagicMock
-from git.exc import InvalidGitRepositoryError
+import pytest
+
 from team_setup_teams import load_yaml_config, create_team_directory, IndentDumper
 
 

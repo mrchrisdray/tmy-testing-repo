@@ -1,12 +1,9 @@
-import pytest
-from unittest.mock import Mock, patch, MagicMock
-import os
+from pathlib import Path
+from unittest.mock import patch
+import shutil
 from pathlib import Path
 import yaml
-import logging
-from github import GithubException
-import tempfile
-import shutil
+import pytest
 
 from team_manage_membership import (
     normalize_username,

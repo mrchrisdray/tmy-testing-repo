@@ -1,0 +1,27 @@
+{
+    "docwriter.style": "NumPy",
+    "cSpell.ignoreWords": [
+        "gitpython",
+        "pytest"
+    ],
+    "cSpell.words": [
+        "caplog",
+        "docparams",
+        "docstrings",
+        "docstyle",
+        "ELIF",
+        "fstring",
+        "indentless",
+        "levelname",
+        "mypy",
+        "pygh",
+        "pylint",
+        "pylintrc",
+        "pyyaml",
+        "rcfile",
+        "subteam",
+        "subteams",
+        "tmpdirname",
+        "venv"
+    ]
+}

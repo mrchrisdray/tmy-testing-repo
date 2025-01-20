@@ -18,7 +18,7 @@ class IndentDumper(yaml.Dumper):
 
 
 def create_team_directory(team_name, team_config, default_sub_teams, repo_root):
-    """Create directory and team configurationfile for a team."""
+    """Create directory and team configuration file for a team."""
     team_dir = repo_root / "teams" / team_name
 
     # Check if the team directory already exists
@@ -202,7 +202,7 @@ def main():
 
             print(f"Completed Processing team: {team_name}\n")
 
-        # Commt changes to the repository
+        # Commit changes to the repository
         commit_changes(repo_root, files_to_commit, "Setup and Update Team configurations")
 
     except Exception as e:

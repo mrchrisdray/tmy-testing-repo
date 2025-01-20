@@ -45,7 +45,7 @@ def delete_team_directory(repo_root, team_name):
             print(f"Deleted team directory {team_dir}")
             return True
         except Exception as e:
-            print(f"Error deleteing team directory {team_dir}: {str(e)}")
+            print(f"Error deleting team directory {team_dir}: {str(e)}")
             return False
     return False
 
@@ -74,11 +74,11 @@ def delete_github_team(gh_org, team_name):
 
 
 def commit_changes(repo_root, commit_message, deleted_teams):
-    """Commit chnages to the repository."""
+    """Commit changes to the repository."""
     try:
         repo = git.Repo(repo_root)
 
-        # Added all chnages including deletions
+        # Added all changes including deletions
         repo.git.add(update=True)
         repo.git.add(".")
 
@@ -88,7 +88,7 @@ def commit_changes(repo_root, commit_message, deleted_teams):
             if team_path.exists():
                 repo.git.rm("-r", str(team_path))
 
-        # Only commit if there are chnages
+        # Only commit if there are changes
         if repo.is_dirty() or len(repo.untracked_files) > 0:
             repo.index.commit(commit_message)
 
@@ -112,7 +112,7 @@ def main():
         repo_root = find_git_root()
         print(f"Git repository root: {repo_root}")
 
-        # Intialize GitHub client
+        # Initialize GitHub client
         github_token = os.environ["GITHUB_TOKEN"]
         org_name = os.environ["GITHUB_ORGANIZATION"]
 
@@ -141,12 +141,12 @@ def main():
 
             # Delete GitHub team and its sub-teams
             if delete_github_team(org, team_name):
-                # If GitHub deletion successfuly, delete local directory
+                # If GitHub deletion successfully, delete local directory
                 if delete_team_directory(repo_root, team_name):
                     deleted_teams.append(team_name)
 
         if deleted_teams:
-            # Commit chnages to the repository
+            # Commit changes to the repository
             commit_message = f"Remove teams: {','.join(deleted_teams)}"
             commit_changes(repo_root, commit_message, deleted_teams)
             print(f"\nSuccessfully removed teams: {deleted_teams}")

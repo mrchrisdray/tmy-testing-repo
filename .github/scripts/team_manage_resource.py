@@ -50,7 +50,7 @@ def load_team_config(file_path: str) -> Dict:
         raise ValueError(f"Failed to parse YAML in {file_path}: {e}") from e
 
 
-def reomve_team_repository(
+def remove_team_repository(
     github_token: str, org_name: str, team_slug: str, repo_name: str, logger: logging.Logger
 ) -> bool:
     """Remove a repository from a team using GitHub Rest API directly"""
@@ -65,7 +65,7 @@ def reomve_team_repository(
         # Send DELETE request to remove repo from team
         response = requests.delete(url, headers=headers)
 
-        # Check reasponse status
+        # Check response status
         if response.status_code in [204, 200]:
             logger.info(f"Successfully removed repository {repo_name} from team {team_slug}")
             return True
@@ -92,7 +92,7 @@ def sync_team_repos(
     parent_repos: List[str] = None,
     is_parent_team: bool = False,
 ):
-    """Sync team repository permissions based on conifg"""
+    """Sync team repository permissions based on config"""
     permission_mapping = {"read": "pull", "write": "push", "admin": "admin", "maintain": "maintain", "triage": "triage"}
     try:
         # Map the permission if needed
@@ -122,7 +122,7 @@ def sync_team_repos(
                             f"Access to repositories is inherited from parent team. "
                         )
                     repo = team.organization.get_repo(current_repo.name)
-                    remove_success = reomve_team_repository(
+                    remove_success = remove_team_repository(
                         github_token=github_token,
                         org_name=org.login,
                         team_slug=team.slug,
@@ -147,7 +147,7 @@ def sync_team_repos(
         for repo_name in desired_repos:
             try:
                 repo = org.get_repo(repo_name)
-                # Check if repository alreadt in the team
+                # Check if repository already in the team
                 if repo_name not in current_repos_names:
                     # Add repository to team if not present
                     try:
@@ -155,11 +155,11 @@ def sync_team_repos(
                         logger.info(f"Added {repo_name} to {team.name} with {api_permission} permission")
                     except GithubException as e:
                         logger.error(f"Failed to add {repo_name} to {team.name}: {e}")
-                # Cehck and update perissions if needed
+                # Check and update permissions if needed
                 try:
                     # Get current permissions for this team on the repo
                     team_repo_permission = team.get_repo_permission(repo)
-                    # Compare current permissions with desired permisson
+                    # Compare current permissions with desired permission
                     if team_repo_permission != api_permission:
                         # Update team repository permission
                         team.update_team_repository(repo, api_permission)
@@ -181,7 +181,7 @@ def sync_team_repos(
                             f"Access to repositories is inherited from parent team. "
                         )
                     repo = team.organization.get_repo(current_repo.name)
-                    remove_success = reomve_team_repository(
+                    remove_success = remove_team_repository(
                         github_token=github_token,
                         org_name=org.login,
                         team_slug=team.slug,
@@ -192,7 +192,7 @@ def sync_team_repos(
                         try:
                             team.remove_from_repos(current_repo)
                             logger.info(
-                                f"Removed {current_repo.name} from {team.name} with permissons: {desired_permissions}"
+                                f"Removed {current_repo.name} from {team.name} with permissions: {desired_permissions}"
                             )
                         except Exception as pygh_error:
                             logger.error(
@@ -255,12 +255,12 @@ def main():
 
     github_token = os.environ.get("GITHUB_TOKEN")
     if not github_token:
-        logger.error("GITHUB_TOKEN envrionment varaible is not set")
+        logger.error("GITHUB_TOKEN environment variable is not set")
         return 1
 
     org_name = os.environ.get("GITHUB_ORGANIZATION")
     if not org_name:
-        logger.error("GITHUB_ORGANIZATION envrionment varaible is not set")
+        logger.error("GITHUB_ORGANIZATION environment variable is not set")
         return 1
 
     team_directory = "teams"
@@ -274,7 +274,7 @@ def main():
             head_sha = os.getenv("GITHUB_SHA")
             repo_full_name = os.environ.get("GITHUB_REPOSITORY")
             if not all([base_sha, head_sha, repo_full_name]):
-                logger.error(f"Missing required envrionment varaibles for push event")
+                logger.error(f"Missing required environment variables for push event")
                 logger.debug(f"base_sha: {base_sha}, head_sha: {head_sha}, repo: {repo_full_name} ")
                 return 1
 

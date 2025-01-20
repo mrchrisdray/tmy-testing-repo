@@ -84,7 +84,7 @@ def update_teams_config(new_team_config, config_file=ROOT_TEAMS_FILE):
 
 def main():
     """Setup team configuration setup"""
-    # Get the issue payload from envrionment variable
+    # Get the issue payload from environment variable
     issue_payload = os.environ.get("ISSUE_PAYLOAD")
 
     if not issue_payload:
@@ -100,7 +100,7 @@ def main():
     # Update teams configuration
     update_teams_config(team_config)
 
-    print(f"Process team configuration for {team_config.get('team_name', 'Unkonwn Team')}")
+    print(f"Process team configuration for {team_config.get('team_name', 'Unknown Team')}")
 
 
 if __name__ == "__main__":

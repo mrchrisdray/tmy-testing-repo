@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  team-resource-managment:
+  team-resource-management:
     runs-on: ubuntu-latest
     environment: 
       name: cloud-platform

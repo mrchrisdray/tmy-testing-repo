@@ -145,7 +145,7 @@ def main():
     github_token = os.environ.get("GITHUB_TOKEN")
     org_name = os.environ.get("GITHUB_ORGANIZATION")
     if not all([org_name, github_token]):
-        logger.error("GITHUB_TOKEN/GITHUB_ORGANIZATION envrionment varaible is not set")
+        logger.error("GITHUB_TOKEN/GITHUB_ORGANIZATION environment variable is not set")
         return 1
 
     team_directory = "teams"
@@ -159,7 +159,7 @@ def main():
             head_sha = os.getenv("GITHUB_SHA")
             repo_full_name = os.environ.get("GITHUB_REPOSITORY")
             if not all([base_sha, head_sha, repo_full_name]):
-                logger.error(f"Missing required envrionment varaibles for push event")
+                logger.error(f"Missing required environment variables for push event")
                 logger.debug(f"base_sha: {base_sha}, head_sha: {head_sha}, repo: {repo_full_name} ")
                 return 1
 

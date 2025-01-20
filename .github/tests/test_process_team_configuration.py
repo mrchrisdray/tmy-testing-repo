@@ -49,7 +49,7 @@ def test_create_teams_config():
             updated_config = yaml.safe_load(f)
 
         # Verify new team addition
-        assert updated_config is not None, "Updated conifg should not be None"
+        assert updated_config is not None, "Updated config should not be None"
         assert "teams" in updated_config, "Update config should have 'teams' key"
         assert isinstance(updated_config["teams"], list), "Teams should still be a list"
         assert len(updated_config["teams"]) == 1, "Should have exactly one team"
@@ -72,20 +72,20 @@ def test_create_duplicate_team(caplog):
         temp_filename = temp_file.name
 
     try:
-        # Attept to create a team with the same name
+        # Attempt to create a team with the same name
         duplicate_team_config = {"team_name": "Team-A", "project": "NewProject", "members": ["@newuser"]}
 
         # Should return False and log message
         caplog.set_level(logging.INFO)
         update_teams_config(duplicate_team_config, temp_filename)
 
-        # Verify no additionl teams were added
+        # Verify no additional teams were added
         with open(temp_filename, mode="r", encoding="utf-8") as f:
             updated_config = yaml.safe_load(f)
         assert len(updated_config["teams"]) == 1, "Should still only have the one team"
 
     finally:
-        # Cleanuo
+        # Cleanup
         os.unlink(temp_filename)
 
 
@@ -98,7 +98,7 @@ def test_create_multiple_teams():
         temp_filename = temp_file.name
 
     try:
-        # Create muliple teams
+        # Create multiple teams
         teams = [
             {"team_name": "Team-A", "project": "ProjectA", "members": ["@user1"]},
             {"team_name": "Team-B", "project": "ProjectB", "members": ["@user2"]},

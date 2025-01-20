@@ -1,12 +1,9 @@
-import pytest
-from unittest.mock import Mock, patch, MagicMock
-import os
+from unittest.mock import MagicMock
 from pathlib import Path
-import yaml
 import logging
 from github import GithubException
 import tempfile
-import shutil
+import pytest
 
 from team_manage_subteams import setup_logging, get_modified_team_files, get_all_team_files
 

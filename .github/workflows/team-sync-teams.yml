@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  teams_managment:
+  teams_management:
     runs-on: ubuntu-latest
     environment: 
       name: cloud-platform

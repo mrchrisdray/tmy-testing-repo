@@ -39,14 +39,14 @@ def load_team_config(file_path: str) -> Dict:
             config = yaml.safe_load(f)
 
         if not isinstance(config.get("teams"), dict):
-            raise ValueError(f"Invcvlid team configuration in {file_path}")
+            raise ValueError(f"Invalid team configuration in {file_path}")
         return config
     except yaml.YAMLError as e:
         raise ValueError(f"Failed to parse YAML in {file_path}: {e}") from e
 
 
 def get_existing_subteams(org, parent_team_name: str) -> Set[str]:
-    """Get set of existing sub-team anmes for parent team"""
+    """Get set of existing sub-team names for parent team"""
     try:
         parent_team = org.get_team_by_slug(parent_team_name)
         return {team.name for team in parent_team.get_teams()}
@@ -56,7 +56,7 @@ def get_existing_subteams(org, parent_team_name: str) -> Set[str]:
 
 
 def create_subteam(org, parent_team_name: str, sub_team_config: Dict, logger: logging.Logger, visibility="closed"):
-    """Create a new sub-tream under the parent team"""
+    """Create a new sub-team under the parent team"""
     try:
         parent_team = org.get_team_by_slug(parent_team_name)
         sub_team_name = sub_team_config["name"]
@@ -104,7 +104,7 @@ def sync_subteams(org, team_config: Dict, logger: logging.Logger):
             delete_subteam(org, team_name, logger)
 
     except GithubException as e:
-        logger.error(f"Failed to synv sub-teams: {e}")
+        logger.error(f"Failed to sync sub-teams: {e}")
 
 
 def main():
@@ -131,7 +131,7 @@ def main():
             head_sha = os.getenv("GITHUB_SHA")
             repo_full_name = os.environ.get("GITHUB_REPOSITORY")
             if not all([base_sha, head_sha, repo_full_name]):
-                logger.error("Missing required environment varaibles for push event")
+                logger.error("Missing required environment variables for push event")
                 return 1
 
             try:
