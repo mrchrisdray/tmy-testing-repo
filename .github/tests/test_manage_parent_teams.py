@@ -48,11 +48,10 @@ def mock_repo():
     mock.index.commit = MagicMock()
 
     # Setup remotes
-    mock_remote = MagicMock()
-    mock_remote.push = MagicMock()
+    mock_origin = MagicMock()
+    mock_origin.push = MagicMock()
     mock.remotes = MagicMock()
-    mock.remotes.__iter__.return_value = [mock_remote]
-    mock.remotes.origin = mock_remote
+    mock.remotes.origin = mock_origin
 
     return mock
 
@@ -91,6 +90,7 @@ class TestGitOperations:
         commit_changes(repo_root, commit_message, deleted_teams)
 
         # Verify interactions
-        mock_repo.git.add.assert_called()
+        mock_repo.git.add.assert_called_with(update=True)
+        mock_repo.git.add.assert_any_call(".")
         mock_repo.index.commit.assert_called_once_with(commit_message)
         mock_repo.remotes.origin.push.assert_called_once()
