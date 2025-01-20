@@ -42,3 +42,10 @@ teams:
     default_repositories:
       - my-testing-repo
     repository_permissions: read
+  - team_name: Team-B
+    description: Github team B setup.
+    project: B-TEAM
+    members:
+    default_repositories:
+      - my-testing-repo
+    repository_permissions: read
