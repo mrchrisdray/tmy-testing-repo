@@ -3,7 +3,6 @@ import sys
 from pathlib import Path
 from unittest.mock import patch, MagicMock
 import shutil
-from pathlib import Path
 import tempfile
 import yaml
 import pytest
