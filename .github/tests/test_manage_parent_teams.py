@@ -165,7 +165,7 @@ def test_main_workflow(mock_exists, mock_repo, mock_github, tmp_path):
         mock_open.return_value.__enter__.return_value.read.return_value = yaml.dump(config)
 
         # Mock existing teams
-        with patch("team_manage_parent_teams.get_existing_team_directories", return_value=["team1", "team2"]):
+        with patch("scripts.team_manage_parent_teams.get_existing_team_directories", return_value=["team1", "team2"]):
             # Execute main
             main()
 
@@ -175,8 +175,8 @@ def test_main_workflow(mock_exists, mock_repo, mock_github, tmp_path):
 
 def test_main_no_teams_to_remove(mock_repo, mock_github):
     """Test main when no teams need to be removed"""
-    with patch("team_manage_parent_teams.get_existing_team_directories", return_value=["team1"]):
-        with patch("team_manage_parent_teams.get_configured_teams", return_value=["team1"]):
+    with patch("scripts.team_manage_parent_teams.get_existing_team_directories", return_value=["team1"]):
+        with patch("scripts.team_manage_parent_teams.get_configured_teams", return_value=["team1"]):
             main()
 
             # Verify no GitHub operations were performed
@@ -185,6 +185,6 @@ def test_main_no_teams_to_remove(mock_repo, mock_github):
 
 def test_error_handling_in_main():
     """Test error handling in main function"""
-    with patch("team_manage_parent_teams.find_git_root", side_effect=InvalidGitRepositoryError):
+    with patch("scripts.team_manage_parent_teams.find_git_root", side_effect=InvalidGitRepositoryError):
         with pytest.raises(InvalidGitRepositoryError):
             main()
