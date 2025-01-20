@@ -42,7 +42,7 @@ def mock_repo():
 
 @pytest.fixture
 def mock_github():
-    with patch('github.Github'):
+    with patch("github.Github"):
         mock_gh = Mock(spec=Github)
         mock_org = Mock(spec=Organization)
         mock_team = Mock(spec=Team)
@@ -63,8 +63,8 @@ def sample_config():
 def test_load_yaml_config(tmp_path):
     """Test loading YAML configuration"""
     config_file = tmp_path / "teams.yml"
-    test_config = {'teams': [{'team_name': 'test_team'}]}
-    with open(config_file, mode='w', encoding="utf-8") as f:
+    test_config = {"teams": [{"team_name": "test_team"}]}
+    with open(config_file, mode="w", encoding="utf-8") as f:
         yaml.dump(test_config, f)
 
     result = load_yaml_config(config_file)
@@ -99,8 +99,8 @@ def test_get_existing_team_directories(tmp_path):
 def test_get_configured_teams(tmp_path):
     """Test getting configured teams from YAML"""
     config_file = tmp_path / "teams.yml"
-    test_config = {'teams': [{'team_name': 'team1'}, {'team_name': 'team2'}]}
-    with open(config_file,mode='w', encoding="utf-8") as f:
+    test_config = {"teams": [{"team_name": "team1"}, {"team_name": "team2"}]}
+    with open(config_file, mode="w", encoding="utf-8") as f:
         yaml.dump(test_config, f)
 
     result = get_configured_teams(config_file)
