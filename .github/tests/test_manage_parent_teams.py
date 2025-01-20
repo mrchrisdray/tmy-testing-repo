@@ -32,32 +32,34 @@ teams:
     - team_name: team2
 """
 
+
 # Fixtures
 @pytest.fixture
 def mock_repo() -> Mock:
     """Create a mock Git repository configuration."""
     mock = Mock(spec=git.Repo)
-    
+
     # Setup basic attributes
     mock.working_dir = "/fake/repo/path"
     mock.is_dirty.return_value = True
     mock.untracked_files = []
-    
+
     # Setup index operations
     mock_index = Mock()
     mock_index.add = Mock()
     mock_index.commit = Mock()
     mock.index = mock_index
-    
+
     # Setup remote operations
     mock_remote = Mock()
     mock_remote.push = Mock()
     mock.remote = mock_remote
-    
+
     # Make iterable for git operations
     mock.__iter__ = iter([])
-    
+
     return mock
+
 
 @pytest.fixture
 def mock_github() -> Mock:
@@ -67,6 +69,7 @@ def mock_github() -> Mock:
         Mock: Mocked GitHub object
     """
     return Mock(spec=Github)
+
 
 @pytest.fixture
 def test_config_file(tmp_path: Path) -> Path:
@@ -82,6 +85,7 @@ def test_config_file(tmp_path: Path) -> Path:
     config_file.write_text(SAMPLE_CONFIG)
     return config_file
 
+
 @pytest.fixture
 def mock_organization() -> Mock:
     """Create a mock GitHub organization.
@@ -92,6 +96,7 @@ def mock_organization() -> Mock:
     mock = Mock(spec=Organization)
     mock.get_team.return_value = Mock(spec=Team)
     return mock
+
 
 # Test Classes
 class TestGitOperations:
@@ -107,14 +112,15 @@ class TestGitOperations:
         """Test committing changes to repository."""
         teams = ["team1"]
         commit_msg = "Test commit"
-        
+
         with patch("git.Repo", return_value=mock_repo):
             commit_changes(Path("/fake/path"), commit_msg, teams)
-            
+
             # Verify git operations
             mock_repo.index.add.assert_called_once()
             mock_repo.index.commit.assert_called_once_with(commit_msg)
             mock_repo.remote.return_value.push.assert_called_once()
+
 
 class TestTeamOperations:
     """Tests for team-related operations."""
@@ -126,9 +132,7 @@ class TestTeamOperations:
             ("nonexistent", False, False),
         ],
     )
-    def test_delete_team_directory(
-        self, tmp_path: Path, team_name: str, exists: bool, expected: bool
-    ) -> None:
+    def test_delete_team_directory(self, tmp_path: Path, team_name: str, exists: bool, expected: bool) -> None:
         """Test team directory deletion scenarios."""
         if exists:
             team_dir = tmp_path / "teams" / team_name
@@ -141,6 +145,7 @@ class TestTeamOperations:
         """Test getting configured teams from config file."""
         teams = get_configured_teams(test_config_file)
         assert teams == ["team1", "team2"]
+
 
 if __name__ == "__main__":
     pytest.main([__file__])
