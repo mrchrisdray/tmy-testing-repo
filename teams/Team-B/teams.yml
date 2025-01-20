@@ -1,0 +1,51 @@
+teams:
+  team_name: Team-B
+  description: Github team B setup.
+  project: B-TEAM
+  repository_permission: read
+  members: null
+  repositories:
+    - my-testing-repo
+  default_sub_teams:
+    - name: Team-B-developers
+      description: Developers for B-TEAM
+      members: []
+      repositories:
+        - my-testing-repo
+      repository_permissions: write
+    - name: Team-B-testers
+      description: Testers for B-TEAM
+      members: []
+      repositories:
+        - my-testing-repo
+      repository_permissions: triage
+    - name: Team-B-reviewers
+      description: Code reviewers for B-TEAM
+      members: []
+      repositories:
+        - my-testing-repo
+      repository_permissions: write
+    - name: Team-B-release-managers
+      description: Staging/Production release management for B-TEAM
+      members: []
+      repositories:
+        - my-testing-repo
+      repository_permissions: maintain
+    - name: Team-B-operations
+      description: Operations for B-TEAM
+      members: []
+      repositories:
+        - my-testing-repo
+      repository_permissions: maintain
+    - name: Team-B-security
+      description: Security for B-TEAM
+      members: []
+      repositories:
+        - my-testing-repo
+      repository_permissions: admin
+    - name: Team-B-project-owners
+      description: Owners for B-TEAM
+      members: []
+      repositories:
+        - my-testing-repo
+      repository_permissions: admin
