@@ -87,9 +87,55 @@ class TestGitOperations:
         deleted_teams = ["team1"]
         commit_message = "Test commit"
 
+        # Check initial state
+        assert mock_repo.is_dirty() or len(mock_repo.untracked_files) > 0
+
+        # Perform commit changes
         commit_changes(repo_root, commit_message, deleted_teams)
 
         # Verify interactions
+        mock_repo.git.add.assert_called_with(update=True)
         mock_repo.git.add.assert_any_call(".")
+        mock_repo.git.rm.assert_any_call("-r", str(repo_root / "teams" / "team1"))
         mock_repo.index.commit.assert_called_once_with(commit_message)
-        mock_repo.remote("origin").push.assert_called_once()
+        mock_repo.remotes.origin.push.assert_called_once()
+
+    @patch('git.Repo')
+    def test_commit_changes_no_changes(self, mock_git_repo, mock_repo):
+        """Test committing changes with no changes in the repository."""
+        mock_git_repo.return_value = mock_repo
+        repo_root = Path("/fake/repo/path")
+        deleted_teams = ["team1"]
+        commit_message = "Test commit"
+
+        # Set repo to have no changes
+        mock_repo.is_dirty.return_value = False
+        mock_repo.untracked_files = []
+
+        # Perform commit changes
+        commit_changes(repo_root, commit_message, deleted_teams)
+
+        # Verify no commit or push
+        mock_repo.index.commit.assert_not_called()
+        mock_repo.remotes.origin.push.assert_not_called()
+
+    @patch('git.Repo')
+    def test_commit_changes_exception(self, mock_git_repo, mock_repo):
+        """Test committing changes with an exception."""
+        mock_git_repo.return_value = mock_repo
+        repo_root = Path("/fake/repo/path")
+        deleted_teams = ["team1"]
+        commit_message = "Test commit"
+
+        # Simulate exception during commit
+        mock_repo.index.commit.side_effect = Exception("Commit error")
+
+        with pytest.raises(Exception, match="Commit error"):
+            commit_changes(repo_root, commit_message, deleted_teams)
+
+        # Verify interactions
+        mock_repo.git.add.assert_called_with(update=True)
+        mock_repo.git.add.assert_any_call(".")
+        mock_repo.git.rm.assert_any_call("-r", str(repo_root / "teams" / "team1"))
+        mock_repo.index.commit.assert_called_once_with(commit_message)
+        mock_repo.remotes.origin.push.assert_not_called()
