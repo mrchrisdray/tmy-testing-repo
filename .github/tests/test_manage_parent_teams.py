@@ -88,27 +88,24 @@ def sample_config():
 @pytest.fixture(autouse=True)
 def mock_env_vars(monkeypatch):
     """Mock environment variables for all tests"""
-    monkeypatch.setenv('GITHUB_TOKEN', 'fake-token')
-    monkeypatch.setenv('GITHUB_ORGANIZATION', 'fake-org')
-    monkeypatch.setenv('GITHUB_REPOSITORY', 'fake-org/fake-repo')
-    monkeypatch.setenv('TESTING', 'true')
+    monkeypatch.setenv("GITHUB_TOKEN", "fake-token")
+    monkeypatch.setenv("GITHUB_ORGANIZATION", "fake-org")
+    monkeypatch.setenv("GITHUB_REPOSITORY", "fake-org/fake-repo")
+    monkeypatch.setenv("TESTING", "true")
+
 
 @pytest.fixture
 def mock_github_client(mocker):
     """Mock GitHub client with proper authentication"""
-    mock_gh = mocker.patch('github.Github')
+    mock_gh = mocker.patch("github.Github")
     mock_instance = mocker.MagicMock()
     mock_org = mocker.MagicMock()
-    
+
     # Setup the mock chain
     mock_instance.get_organization.return_value = mock_org
     mock_gh.return_value = mock_instance
-    
-    return {
-        'client': mock_instance,
-        'org': mock_org,
-        'gh': mock_gh
-    }
+
+    return {"client": mock_instance, "org": mock_org, "gh": mock_gh}
 
 
 def test_load_yaml_config(tmp_path):
@@ -220,9 +217,9 @@ def test_main_workflow(mock_env_vars, mock_github_client, mock_repo, tmp_path):
     ):
         # Execute main
         main()
-        
+
         # Verify GitHub operations
-        mock_github_client['org'].get_team_by_slug.assert_called_with("team2")
+        mock_github_client["org"].get_team_by_slug.assert_called_with("team2")
 
 
 def test_main_no_teams_to_remove(mock_repo, mock_github_auth, tmp_path):
