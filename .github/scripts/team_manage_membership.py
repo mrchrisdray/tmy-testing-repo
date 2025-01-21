@@ -1,203 +1,164 @@
-import os
-import sys
+import pytest
+from unittest.mock import Mock, patch, MagicMock
 from pathlib import Path
-import logging
-import traceback
-from typing import List, Dict, Set
 import yaml
-from github import Github, GithubException
+import logging
+from github import GithubException
 
+# Import the functions to test
+from paste import (
+    normalize_username,
+    get_modified_team_files,
+    get_all_team_files,
+    load_team_config,
+    get_team_members,
+    sync_team_members,
+    sync_team_memberships,
+)
 
-def setup_logging():
-    """Configure logging for script"""
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
-    return logging.getLogger(__name__)
+@pytest.fixture
+def mock_logger():
+    return logging.getLogger("test_logger")
 
+@pytest.fixture
+def sample_team_config():
+    return {
+        "teams": {
+            "team_name": "engineering",
+            "members": ["@user1", "user2", "'user3'"],
+            "default_sub_teams": [
+                {
+                    "name": "backend",
+                    "members": ["user1", "user2"]
+                },
+                {
+                    "name": "frontend",
+                    "members": ["user2", "user3"]
+                }
+            ]
+        }
+    }
 
-def normalize_username(username: str) -> str:
-    """Remove @ prefix and quotes from username id present"""
-    if username is None:
-        return ""
-    return username.lstrip("@").strip("'")
+@pytest.fixture
+def mock_github():
+    mock = MagicMock()
+    mock.get_user.return_value = MagicMock()
+    return mock
 
+@pytest.fixture
+def mock_team():
+    mock = MagicMock()
+    mock.name = "test-team"
+    return mock
 
-def get_modified_team_files(repo, base_sha: str, head_sha: str) -> List[str]:
-    """Get list of modified teams.yml files between two commits."""
-    try:
-        comparison = repo.compare(base_sha, head_sha)
-        modified_files = [file.filename for file in comparison.files]
+def test_normalize_username():
+    assert normalize_username("@username") == "username"
+    assert normalize_username("'username'") == "username"
+    assert normalize_username("username") == "username"
+    assert normalize_username(None) == ""
+    assert normalize_username("@'username'") == "username"
 
-        all_team_files = get_all_team_files("teams")
+def test_get_all_team_files(tmp_path):
+    # Create temporary directory structure
+    team1_dir = tmp_path / "team1"
+    team2_dir = tmp_path / "team2"
+    team1_dir.mkdir()
+    team2_dir.mkdir()
+    
+    # Create teams.yml files
+    (team1_dir / "teams.yml").touch()
+    (team2_dir / "teams.yml").touch()
+    (tmp_path / "random.yml").touch()
+    
+    files = get_all_team_files(str(tmp_path))
+    assert len(files) == 2
+    assert all("teams.yml" in f for f in files)
 
-        return [str(file) for file in all_team_files if str(file) in modified_files]
-    except GithubException as e:
-        logging.error(f"Failed to compare commits {base_sha} and {head_sha}: {e}")
+@patch('builtins.open')
+def test_load_team_config_valid(mock_open, sample_team_config):
+    mock_open.return_value.__enter__.return_value.read.return_value = yaml.dump(sample_team_config)
+    config = load_team_config("dummy_path")
+    assert config == sample_team_config
+    assert "teams" in config
+    assert config["teams"]["team_name"] == "engineering"
 
-        return get_all_team_files("teams")
+@patch('builtins.open')
+def test_load_team_config_invalid_yaml(mock_open):
+    mock_open.return_value.__enter__.return_value.read.return_value = "invalid: yaml: content: - ["
+    with pytest.raises(ValueError) as exc_info:
+        load_team_config("dummy_path")
+    assert "Failed to parse YAML" in str(exc_info.value)
 
+def test_get_modified_team_files():
+    mock_repo = MagicMock()
+    mock_comparison = MagicMock()
+    mock_file1 = MagicMock()
+    mock_file1.filename = "team1/teams.yml"
+    mock_file2 = MagicMock()
+    mock_file2.filename = "team2/teams.yml"
+    
+    mock_comparison.files = [mock_file1, mock_file2]
+    mock_repo.compare.return_value = mock_comparison
+    
+    files = get_modified_team_files(mock_repo, "base-sha", "head-sha")
+    assert len(files) == 2
+    assert "team1/teams.yml" in files
+    assert "team2/teams.yml" in files
 
-def get_all_team_files(teams_dir: str) -> List[str]:
-    """Find all teams.yml files in the teams directory structure"""
-    teams_path = Path(teams_dir)
-    return [str(yml_file) for yml_file in teams_path.glob("*/teams.yml") if yml_file.is_file()]
+def test_get_team_members(mock_team, mock_logger):
+    member1 = MagicMock()
+    member1.login = "user1"
+    member2 = MagicMock()
+    member2.login = "user2"
+    mock_team.get_members.return_value = [member1, member2]
+    
+    members = get_team_members(mock_team, mock_logger)
+    assert members == {"user1", "user2"}
 
+def test_get_team_members_error(mock_team, mock_logger):
+    mock_team.get_members.side_effect = GithubException(404, "Not found")
+    members = get_team_members(mock_team, mock_logger)
+    assert members == set()
 
-def load_team_config(file_path: str) -> Dict:
-    """Load team configuration from Yaml file"""
-    try:
-        with open(file_path, mode="r", encoding="utf-8") as f:
-            config = yaml.safe_load(f)
+def test_sync_team_members_add_remove(mock_github, mock_team, mock_logger):
+    # Setup current team members
+    current_member = MagicMock()
+    current_member.login = "existing_user"
+    mock_team.get_members.return_value = [current_member]
+    
+    # Test syncing with new desired members
+    desired_members = ["new_user"]
+    sync_team_members(mock_github, mock_team, "test-team", desired_members, mock_logger)
+    
+    # Verify that new member was added and existing member was removed
+    mock_team.add_membership.assert_called_once()
+    mock_team.remove_membership.assert_called_once()
 
-        if not isinstance(config.get("teams"), dict):
-            raise ValueError(f"Invalid team configuration in {file_path}")
+def test_sync_team_members_empty_list(mock_github, mock_team, mock_logger):
+    current_member = MagicMock()
+    current_member.login = "existing_user"
+    mock_team.get_members.return_value = [current_member]
+    
+    sync_team_members(mock_github, mock_team, "test-team", [], mock_logger)
+    mock_team.remove_membership.assert_called_once()
+    mock_team.add_membership.assert_not_called()
 
-        return config
-    except yaml.YAMLError as e:
-        raise ValueError(f"Failed to parse YAML in {file_path}: {e}") from e
+def test_sync_team_memberships(mock_github, mock_logger, sample_team_config):
+    mock_org = MagicMock()
+    mock_parent_team = MagicMock()
+    mock_sub_team = MagicMock()
+    
+    mock_org.get_team_by_slug.side_effect = [mock_parent_team, mock_sub_team, mock_sub_team]
+    
+    sync_team_memberships(mock_github, mock_org, sample_team_config, mock_logger)
+    
+    # Verify parent team was synced
+    assert mock_org.get_team_by_slug.call_count >= 1
+    mock_parent_team.get_members.assert_called_once()
 
-
-def get_team_members(team, logger: logging.Logger) -> Set[str]:
-    """Safely get team members handling empty teams"""
-    try:
-        return {member.login for member in team.get_members()}
-    except GithubException as e:
-        logger.error(f"Failed to get members for team {team.name}: {e}")
-        return set()
-
-
-def remove_all_members(team, team_name: str, logger: logging.Logger):
-    """Remove all members for a team with empty members list in config YAML file."""
-    current_members = get_team_members(team, logger)
-    for member in current_members:
-        try:
-            team.remove_membership(member)
-            logger.info(f"Removed {member} from {team_name}")
-        except GithubException as e:
-            logger.error(f"Failed to remove {member} from {team_name}: {e}")
-
-
-def sync_team_members(gh, team, team_name: str, members_list: List[str], logger: logging.Logger):
-    """Sync team members based on the provided list"""
-    if members_list is None or not members_list:
-        logger.info(f"Empty members list for {team_name} - removing all members")
-        remove_all_members(team, team_name, logger)
-        return
-
-    desired_members = {normalize_username(member) for member in members_list}
-    current_members = get_team_members(team, logger)
-
-    # Add
-    for member in desired_members - current_members:
-        try:
-            user = gh.get_user(member)
-            team.add_membership(user, role="member")
-            logger.info(f"Added {member} to {team_name}")
-        except GithubException as e:
-            logger.error(f"Failed to add {member} to {team_name}: {e}")
-
-    # Remove
-    for member in current_members - desired_members:
-        try:
-            user = gh.get_user(member)
-            team.remove_membership(user)
-            logger.info(f"Removed {member} from {team_name}")
-        except GithubException as e:
-            logger.error(f"Failed to remove {member} from {team_name}: {e}")
-
-
-def sync_team_memberships(gh, org, team_config: Dict, logger: logging.Logger):
-    """Sync team memberships based on configuration"""
-    team_data = team_config["teams"]
-    parent_team_name = team_data["team_name"]
-
-    try:
-        try:
-            parent_team = org.get_team_by_slug(parent_team_name)
-            logger.info(f"Found parent team: {parent_team_name}")
-
-            parent_members = team_data.get("members", [])
-            sync_team_members(gh, parent_team, parent_team_name, parent_members, logger)
-
-        except GithubException:
-            logger.error(f"Parent team {parent_team_name} does not exist in the organization - skipping")
-            return
-
-        for sub_team_config in team_data.get("default_sub_teams", []):
-            sub_team_name = sub_team_config["name"]
-            try:
-                sub_team = org.get_team_by_slug(sub_team_name)
-                logger.info(f"Found sub-team: {sub_team_name}")
-
-                sub_team_members = sub_team_config.get("members", [])
-                sync_team_members(gh, sub_team, sub_team_name, sub_team_members, logger)
-
-            except GithubException:
-                logger.error(f"Sub-team{sub_team_name} does not exist in the organization - skipping")
-                continue
-
-    except GithubException as e:
-        logger.error(f"Failed to sync teams: {e}")
-
-
-def main():
-    logger = setup_logging()
-
-    github_token = os.environ.get("GITHUB_TOKEN")
-    org_name = os.environ.get("GITHUB_ORGANIZATION")
-    if not all([org_name, github_token]):
-        logger.error("GITHUB_TOKEN/GITHUB_ORGANIZATION environment variable is not set")
-        return 1
-
-    team_directory = "teams"
-
-    try:
-        gh = Github(github_token)
-        org = gh.get_organization(org_name)
-
-        if os.getenv("GITHUB_EVENT_NAME") == "push" and not os.environ.get("GITHUB_API_EVENT") == "api-push":
-            base_sha = os.getenv("GITHUB_EVENT_BEFORE")
-            head_sha = os.getenv("GITHUB_SHA")
-            repo_full_name = os.environ.get("GITHUB_REPOSITORY")
-            if not all([base_sha, head_sha, repo_full_name]):
-                logger.error(f"Missing required environment variables for push event")
-                logger.debug(f"base_sha: {base_sha}, head_sha: {head_sha}, repo: {repo_full_name} ")
-                return 1
-
-            try:
-                repo = gh.get_repo(repo_full_name)
-                logger.debug(f"Successfully accessed repository: {repo_full_name}")
-                team_files = get_modified_team_files(repo, base_sha, head_sha)
-                if team_files is not None:
-                    logger.info(f"Processing all {len(team_files)} team files")
-                else:
-                    logger.info("No team files were modified in this push")
-                    return 0
-            except GithubException as e:
-                logger.error(f"Error accessing repository or getting modified files: {str(e)}")
-                logger.info("Falling back to processing all team files")
-                team_files = get_all_team_files(team_directory)
-        else:
-            team_files = get_all_team_files(team_directory)
-
-        if not team_files:
-            logger.info("No team files to process")
-            return 0
-
-        for team_file in team_files:
-            try:
-                logger.info(f"Processing team file: {team_file}")
-                team_config = load_team_config(team_file)
-                sync_team_memberships(gh, org, team_config, logger)
-            except Exception as e:
-                logger.error(f"Failed to process {team_file}: {str(e)}\n{traceback.format_exc()}")
-        return 0
-
-    except Exception as e:
-        logger.error(f"Unexpected error in main: {str(e)}\n{traceback.format_exc()}")
-        return 1
-    finally:
-        gh.close()
-
-
-if __name__ == "__main__":
-    sys.exit(main())
+def test_sync_team_memberships_parent_team_not_found(mock_github, mock_logger, sample_team_config):
+    mock_org = MagicMock()
+    mock_org.get_team_by_slug.side_effect = GithubException(404, "Not found")
+    
+    sync_team_memberships(mock_github, mock_org, sample_team_config, mock_logger)
+    mock_org.get_team_by_slug.assert_called_once()
