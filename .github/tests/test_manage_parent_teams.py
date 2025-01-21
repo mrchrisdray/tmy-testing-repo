@@ -214,6 +214,7 @@ def test_main_workflow(test_env, mock_gh_auth, tmp_path):
     """Test the main workflow"""
     with patch.multiple(
         "scripts.team_manage_parent_teams",
+        Github=MagicMock(return_value=mock_gh_auth),
         find_git_root=lambda: tmp_path,
         get_existing_team_directories=lambda x: ["team1", "team2"],
         get_configured_teams=lambda x: ["team1"],
