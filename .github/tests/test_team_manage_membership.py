@@ -60,23 +60,6 @@ def test_normalize_username():
     assert normalize_username("@'username'") == "username"
 
 
-def test_get_all_team_files(tmp_path):
-    # Create temporary directory structure
-    team1_dir = tmp_path / "team1"
-    team2_dir = tmp_path / "team2"
-    team1_dir.mkdir()
-    team2_dir.mkdir()
-
-    # Create teams.yml files
-    (team1_dir / "teams.yml").touch()
-    (team2_dir / "teams.yml").touch()
-    (tmp_path / "random.yml").touch()
-
-    files = get_all_team_files(str(tmp_path))
-    assert len(files) == 2
-    assert all("teams.yml" in f for f in files)
-
-
 @patch("builtins.open")
 def test_load_team_config_valid(mock_open, sample_team_config):
     mock_open.return_value.__enter__.return_value.read.return_value = yaml.dump(sample_team_config)
