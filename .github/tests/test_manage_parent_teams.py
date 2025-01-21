@@ -73,16 +73,20 @@ def mock_github():
 def mock_gh_auth():
     """Mock GitHub authentication and basic operations"""
     with patch("github.Github") as mock_gh:
+        # Create mock instances
         mock_instance = MagicMock()
         mock_org = MagicMock()
         mock_team = MagicMock()
-
-        # Setup authentication chain
-        mock_instance.get_user.return_value.login = "test-user"
-        mock_org.get_team_by_slug.return_value = mock_team
-        mock_instance.get_organization.return_value = mock_org
+        
+        # Setup organization
+        mock_org.get_team_by_slug = MagicMock(return_value=mock_team)
+        mock_instance.get_organization = MagicMock(return_value=mock_org)
+        
+        # Setup team
+        mock_team.name = "team2"
+        mock_team.delete = MagicMock()
+        
         mock_gh.return_value = mock_instance
-
         yield mock_instance
 
 
@@ -218,12 +222,15 @@ def test_main_workflow(test_env, mock_gh_auth, tmp_path):
         find_git_root=lambda: tmp_path,
         get_existing_team_directories=lambda x: ["team1", "team2"],
         get_configured_teams=lambda x: ["team1"],
-        delete_github_team=lambda x, y: True,
-        delete_team_directory=lambda x, y: True,
-        commit_changes=lambda x, y, z: None,
+        delete_github_team=MagicMock(return_value=True),
+        delete_team_directory=MagicMock(return_value=True),
+        commit_changes=MagicMock(),
     ):
+        # Execute main
         main()
-        mock_gh_auth.get_organization.return_value.get_team_by_slug.assert_called_with("team2")
+        
+        # Verify GitHub operations
+        mock_gh_auth.get_organization().get_team_by_slug.assert_called_with("team2")
 
 
 def test_main_no_teams_to_remove(mock_gh_auth, tmp_path):
