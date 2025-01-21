@@ -1,11 +1,14 @@
+import os
+import sys
 from unittest.mock import patch, MagicMock
-import yaml
 import logging
+import yaml
 import pytest
 from github import GithubException
 
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 # Import the functions to test
-from paste import (
+from scripts.team_manage_membership import (
     normalize_username,
     get_modified_team_files,
     get_all_team_files,
