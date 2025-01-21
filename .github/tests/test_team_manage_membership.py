@@ -99,7 +99,7 @@ def test_get_modified_team_files(mock_repo):
     """Test getting modified team files."""
     base_sha = "base_sha"
     head_sha = "head_sha"
-    
+
     modified_files = get_modified_team_files(mock_repo, base_sha, head_sha)
     assert len(modified_files) == 1
     assert modified_files[0] == "teams/team1/teams.yml"
@@ -109,20 +109,19 @@ def test_sync_team_members(logger):
     """Test syncing team members."""
     team = MagicMock()
     members_list = ["user1", "user2"]
-    
+
     sync_team_members(team, members_list, logger)
-    
+
     team.add_membership.assert_any_call("user1")
     team.add_membership.assert_any_call("user2")
+
 
 def test_sync_team_memberships(logger):
     """Test syncing team memberships."""
     gh_team = MagicMock()
-    team_config = {
-        "members": ["user1", "user2"]
-    }
-    
+    team_config = {"members": ["user1", "user2"]}
+
     sync_team_memberships(gh_team, team_config, logger)
-    
+
     gh_team.add_membership.assert_any_call("user1")
     gh_team.add_membership.assert_any_call("user2")

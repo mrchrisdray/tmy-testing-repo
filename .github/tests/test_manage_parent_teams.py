@@ -50,7 +50,7 @@ def mock_repo():
 @pytest.fixture
 def mock_github():
     """Create mock GitHub objects without using spec"""
-    with patch("github.Github"): 
+    with patch("github.Github"):
         mock_gh = MagicMock()
         mock_org = MagicMock()
         mock_team = MagicMock()
@@ -169,11 +169,11 @@ def test_commit_changes(mock_repo):
     mock_repo.index.commit.assert_called_once_with("Test commit")
     mock_repo.remote().push.assert_called_once()
 
-@patch.dict(os.environ, {
-    "GITHUB_TOKEN": "fake-token",
-    "GITHUB_ORGANIZATION": "fake-org",
-    "GITHUB_REPOSITORY": "fake-org/fake-repo"
-})
+
+@patch.dict(
+    os.environ,
+    {"GITHUB_TOKEN": "fake-token", "GITHUB_ORGANIZATION": "fake-org", "GITHUB_REPOSITORY": "fake-org/fake-repo"},
+)
 def test_main_workflow(mock_repo, mock_github, tmp_path):
     """Test the main workflow"""
     with (
@@ -183,14 +183,14 @@ def test_main_workflow(mock_repo, mock_github, tmp_path):
         patch("scripts.team_manage_parent_teams.get_configured_teams", return_value=["team1"]),
         patch("scripts.team_manage_parent_teams.delete_github_team", return_value=True),
         patch("scripts.team_manage_parent_teams.delete_team_directory", return_value=True),
-        patch("scripts.team_manage_parent_teams.commit_changes", return_value=None)
+        patch("scripts.team_manage_parent_teams.commit_changes", return_value=None),
     ):
         # Execute main
         main()
 
         # Verify GitHub operations
         mock_github["org"].get_team_by_slug.assert_called_with("team2")
-        
+
         # Verify deletion operations
         mock_github["team"].delete.assert_called_once()
 
@@ -198,11 +198,14 @@ def test_main_workflow(mock_repo, mock_github, tmp_path):
 def test_main_no_teams_to_remove(mock_repo, mock_github_auth, tmp_path):
     """Test main when no teams need to be removed"""
     with (
-        patch.dict(os.environ, {
-            "GITHUB_TOKEN": "fake-token",
-            "GITHUB_ORGANIZATION": "fake-org",
-            "GITHUB_REPOSITORY": "fake-org/fake-repo"
-        }),
+        patch.dict(
+            os.environ,
+            {
+                "GITHUB_TOKEN": "fake-token",
+                "GITHUB_ORGANIZATION": "fake-org",
+                "GITHUB_REPOSITORY": "fake-org/fake-repo",
+            },
+        ),
         patch("scripts.team_manage_parent_teams.find_git_root", return_value=tmp_path),
         patch("scripts.team_manage_parent_teams.get_existing_team_directories", return_value=["team1"]),
         patch("scripts.team_manage_parent_teams.get_configured_teams", return_value=["team1"]),
@@ -212,6 +215,7 @@ def test_main_no_teams_to_remove(mock_repo, mock_github_auth, tmp_path):
 
         # Verify no team deletions occurred
         mock_github_auth.get_organization.return_value.get_team_by_slug.assert_not_called()
+
 
 def test_error_handling_in_main():
     """Test error handling in main function"""

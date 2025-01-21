@@ -28,16 +28,16 @@ def temp_dir():
 def mock_repo():
     """Create mock repository with diff functionality"""
     mock = MagicMock()
-    
+
     # Setup diff objects
     mock_diff = MagicMock()
     mock_diff.a_path = "teams/test-team/teams.yml"
-    
+
     # Setup commit and diff methods
     mock_commit = MagicMock()
     mock_commit.diff.return_value = [mock_diff]
     mock.commit.return_value = mock_commit
-    
+
     return mock
 
 
@@ -67,7 +67,7 @@ def test_get_modified_team_files_success(mock_repo):
     """Test getting modified team files"""
     base_sha = "base_sha"
     head_sha = "head_sha"
-    
+
     modified_files = get_modified_team_files(mock_repo, base_sha, head_sha)
     assert len(modified_files) == 1
     assert modified_files[0] == "teams/test-team/teams.yml"

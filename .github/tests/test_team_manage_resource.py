@@ -58,7 +58,7 @@ def test_setup_logging():
 def test_get_modified_team_files_success(mock_repo):
     base_sha = "base_sha"
     head_sha = "head_sha"
-    
+
     modified_files = get_modified_team_files(mock_repo, base_sha, head_sha)
     assert len(modified_files) == 1
     assert modified_files[0] == "teams/team1/teams.yml"
@@ -68,6 +68,7 @@ def test_get_modified_team_files_github_exception(mock_repo):
     mock_repo.commit.side_effect = GithubException(404, "Not found")
     modified_files = get_modified_team_files(mock_repo, "base_sha", "head_sha")
     assert len(modified_files) == 0
+
 
 def test_get_all_team_files(sample_teams_dir):
     result = get_all_team_files(str(sample_teams_dir))

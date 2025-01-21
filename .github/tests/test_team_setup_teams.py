@@ -22,11 +22,9 @@ def sample_team_config():
         "description": "Test Team",
         "project": "Test Project",
         "default_repositories": ["repo1", "repo2"],
-        "repository_permissions": {
-            "repo1": "admin",
-            "repo2": "maintain"
-        }
+        "repository_permissions": {"repo1": "admin", "repo2": "maintain"},
     }
+
 
 @pytest.fixture
 def default_sub_teams():
@@ -47,15 +45,15 @@ def test_create_team_directory(temp_repo_root, sample_team_config):
     """Test creating a new team directory"""
     team_name = "test-team"
     result = create_team_directory(temp_repo_root, team_name, sample_team_config)
-    
+
     assert result is True
     team_dir = temp_repo_root / "teams" / team_name
     assert team_dir.exists()
-    
+
     config_file = team_dir / "config.yml"
     assert config_file.exists()
-    
-    with open(config_file, 'r') as f:
+
+    with open(config_file, "r") as f:
         saved_config = yaml.safe_load(f)
     assert saved_config == sample_team_config
 
@@ -65,7 +63,7 @@ def test_create_existing_team_directory(temp_repo_root, sample_team_config):
     team_name = "existing-team"
     team_dir = temp_repo_root / "teams" / team_name
     team_dir.mkdir(parents=True)
-    
+
     result = create_team_directory(temp_repo_root, team_name, sample_team_config)
     assert result is False
 
