@@ -70,14 +70,25 @@ def mock_github():
 
 
 @pytest.fixture
-def mock_github_auth():
-    with patch("github.Github") as mock_gh:
+def mock_gh_auth():
+    """Mock GitHub authentication and basic operations"""
+    with patch('github.Github') as mock_gh:
         mock_instance = MagicMock()
         mock_org = MagicMock()
+        mock_team = MagicMock()
+        
+        # Setup authentication chain
         mock_instance.get_user.return_value.login = "test-user"
+        mock_org.get_team_by_slug.return_value = mock_team
         mock_instance.get_organization.return_value = mock_org
         mock_gh.return_value = mock_instance
-        return {"instance": mock_instance, "org": mock_org}
+        
+        return {
+            "gh": mock_gh,
+            "instance": mock_instance,
+            "org": mock_org,
+            "team": mock_team
+        }
 
 
 @pytest.fixture
@@ -204,25 +215,22 @@ def test_commit_changes(mock_repo):
     mock_repo.remote().push.assert_called_once()
 
 
-def test_main_workflow(mock_env_vars, mock_github_client, mock_repo, tmp_path):
+def test_main_workflow(test_env, mock_gh_auth, mock_repo, tmp_path):
     """Test the main workflow"""
-    with (
-        patch("pathlib.Path.exists", return_value=True),
-        patch("scripts.team_manage_parent_teams.find_git_root", return_value=tmp_path),
-        patch("scripts.team_manage_parent_teams.get_existing_team_directories", return_value=["team1", "team2"]),
-        patch("scripts.team_manage_parent_teams.get_configured_teams", return_value=["team1"]),
-        patch("scripts.team_manage_parent_teams.delete_github_team", return_value=True),
-        patch("scripts.team_manage_parent_teams.delete_team_directory", return_value=True),
-        patch("scripts.team_manage_parent_teams.commit_changes", return_value=None),
+    with patch.multiple(
+        'scripts.team_manage_parent_teams',
+        find_git_root=lambda: tmp_path,
+        get_existing_team_directories=lambda x: ["team1", "team2"],
+        get_configured_teams=lambda x: ["team1"],
+        delete_github_team=lambda x, y: True,
+        delete_team_directory=lambda x, y: True,
+        commit_changes=lambda x, y, z: None
     ):
-        # Execute main
         main()
-
-        # Verify GitHub operations
-        mock_github_client["org"].get_team_by_slug.assert_called_with("team2")
+        mock_gh_auth["org"].get_team_by_slug.assert_called_with("team2")
 
 
-def test_main_no_teams_to_remove(mock_repo, mock_github_auth, tmp_path):
+def test_main_no_teams_to_remove(mock_repo, mock_gh_auth, tmp_path):
     """Test main when no teams need to be removed"""
     with (
         patch.dict(
@@ -241,7 +249,7 @@ def test_main_no_teams_to_remove(mock_repo, mock_github_auth, tmp_path):
         main()
 
         # Verify no team deletions occurred
-        mock_github_auth.get_organization.return_value.get_team_by_slug.assert_not_called()
+        mock_gh_auth.get_organization.return_value.get_team_by_slug.assert_not_called()
 
 
 def test_error_handling_in_main():
@@ -249,3 +257,16 @@ def test_error_handling_in_main():
     with patch("scripts.team_manage_parent_teams.find_git_root", side_effect=InvalidGitRepositoryError):
         with pytest.raises(InvalidGitRepositoryError):
             main()
+
+
+def test_get_modified_team_files(mock_repo):
+    """Test getting modified team files"""
+    mock_diff = MagicMock()
+    mock_diff.a_path = "teams/team1/config.yml"
+    mock_commit = MagicMock()
+    mock_commit.diff.return_value = [mock_diff]
+    mock_repo.commit.return_value = mock_commit
+    
+    modified_files = get_modified_team_files(mock_repo, "base_sha", "head_sha")
+    assert len(modified_files) == 1
+    assert modified_files[0] == "teams/team1/config.yml"
