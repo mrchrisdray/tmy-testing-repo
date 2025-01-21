@@ -222,26 +222,30 @@ def test_commit_changes(mock_repo):
 
 def test_main_workflow(test_env, mock_gh_auth, tmp_path):
     """Test the main workflow"""
-    # Get stored references
-    mock_org = mock_gh_auth._org
-    mock_team = mock_gh_auth._team
-
-    with patch.multiple(
-        "scripts.team_manage_parent_teams",
-        Github=MagicMock(return_value=mock_gh_auth),
-        find_git_root=lambda: tmp_path,
-        get_existing_team_directories=lambda x: ["team1", "team2"],
-        get_configured_teams=lambda x: ["team1"],
-        delete_github_team=MagicMock(return_value=True),
-        delete_team_directory=MagicMock(return_value=True),
-        commit_changes=MagicMock(),
-    ):
+    # Create a new mock for delete_github_team to track its calls
+    mock_delete_github = MagicMock(return_value=True)
+    
+    # Setup patch configuration
+    patches = {
+        "Github": MagicMock(return_value=mock_gh_auth),
+        "find_git_root": lambda: tmp_path,
+        "get_existing_team_directories": lambda x: ["team1", "team2"],
+        "get_configured_teams": lambda x: ["team1"],
+        "delete_github_team": mock_delete_github,
+        "delete_team_directory": MagicMock(return_value=True),
+        "commit_changes": MagicMock(),
+    }
+    
+    with patch.multiple("scripts.team_manage_parent_teams", **patches):
         # Execute main
         main()
-
-        # Verify GitHub operations
-        mock_org.get_team_by_slug.assert_called_with("team2")
-        mock_team.delete.assert_called_once()
+        
+        # Verify that delete_github_team was called with correct parameters
+        mock_delete_github.assert_called_once_with(mock_gh_auth._org, "team2")
+        
+        # Verify that other operations occurred
+        patches["delete_team_directory"].assert_called_once()
+        patches["commit_changes"].assert_called_once()
 
 
 def test_main_no_teams_to_remove(mock_gh_auth, tmp_path):
