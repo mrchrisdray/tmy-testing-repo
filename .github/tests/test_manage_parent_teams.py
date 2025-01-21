@@ -210,7 +210,7 @@ def test_commit_changes(mock_repo):
     mock_repo.remote().push.assert_called_once()
 
 
-def test_main_workflow(mock_gh_auth, tmp_path):
+def test_main_workflow(test_env, mock_gh_auth, tmp_path):
     """Test the main workflow"""
     with patch.multiple(
         "scripts.team_manage_parent_teams",
@@ -222,20 +222,17 @@ def test_main_workflow(mock_gh_auth, tmp_path):
         commit_changes=lambda x, y, z: None,
     ):
         main()
-        mock_gh_auth["org"].get_team_by_slug.assert_called_with("team2")
-
+        mock_gh_auth.get_organization.return_value.get_team_by_slug.assert_called_with("team2")
 
 def test_main_no_teams_to_remove(mock_gh_auth, tmp_path):
     """Test main when no teams need to be removed"""
-    with (
-        patch("scripts.team_manage_parent_teams.find_git_root", return_value=tmp_path),
-        patch("scripts.team_manage_parent_teams.get_existing_team_directories", return_value=["team1"]),
-        patch("scripts.team_manage_parent_teams.get_configured_teams", return_value=["team1"]),
+    with patch.multiple(
+        "scripts.team_manage_parent_teams",
+        find_git_root=lambda: tmp_path,
+        get_existing_team_directories=lambda x: ["team1"],
+        get_configured_teams=lambda x: ["team1"]
     ):
-        # Execute main
         main()
-
-        # Verify no team deletions occurred
         mock_gh_auth.get_organization.return_value.get_team_by_slug.assert_not_called()
 
 
