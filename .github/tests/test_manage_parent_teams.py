@@ -224,7 +224,7 @@ def test_main_workflow(test_env, mock_gh_auth, tmp_path):
     """Test the main workflow"""
     # Create a new mock for delete_github_team to track its calls
     mock_delete_github = MagicMock(return_value=True)
-    
+
     # Setup patch configuration
     patches = {
         "Github": MagicMock(return_value=mock_gh_auth),
@@ -235,14 +235,14 @@ def test_main_workflow(test_env, mock_gh_auth, tmp_path):
         "delete_team_directory": MagicMock(return_value=True),
         "commit_changes": MagicMock(),
     }
-    
+
     with patch.multiple("scripts.team_manage_parent_teams", **patches):
         # Execute main
         main()
-        
+
         # Verify that delete_github_team was called with correct parameters
         mock_delete_github.assert_called_once_with(mock_gh_auth._org, "team2")
-        
+
         # Verify that other operations occurred
         patches["delete_team_directory"].assert_called_once()
         patches["commit_changes"].assert_called_once()
