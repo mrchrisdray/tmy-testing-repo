@@ -50,7 +50,7 @@ def mock_repo():
 @pytest.fixture
 def mock_github():
     """Create mock GitHub objects without using spec"""
-    with patch("github.Github"):
+    with patch("github.Github") as mock_gh:
         mock_gh = MagicMock()
         mock_org = MagicMock()
         mock_team = MagicMock()
@@ -83,7 +83,7 @@ def mock_gh_auth():
         mock_instance.get_organization.return_value = mock_org
         mock_gh.return_value = mock_instance
 
-        return {"gh": mock_gh, "instance": mock_instance, "org": mock_org, "team": mock_team}
+        yield {"gh": mock_gh, "instance": mock_instance, "org": mock_org, "team": mock_team}
 
 
 @pytest.fixture
@@ -210,7 +210,7 @@ def test_commit_changes(mock_repo):
     mock_repo.remote().push.assert_called_once()
 
 
-def test_main_workflow(test_env, mock_gh_auth, mock_repo, tmp_path):
+def test_main_workflow(mock_gh_auth, tmp_path):
     """Test the main workflow"""
     with patch.multiple(
         "scripts.team_manage_parent_teams",
@@ -225,7 +225,7 @@ def test_main_workflow(test_env, mock_gh_auth, mock_repo, tmp_path):
         mock_gh_auth["org"].get_team_by_slug.assert_called_with("team2")
 
 
-def test_main_no_teams_to_remove(mock_repo, mock_gh_auth, tmp_path):
+def test_main_no_teams_to_remove(mock_gh_auth, tmp_path):
     """Test main when no teams need to be removed"""
     with (
         patch("scripts.team_manage_parent_teams.find_git_root", return_value=tmp_path),
