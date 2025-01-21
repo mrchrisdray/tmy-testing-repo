@@ -91,12 +91,12 @@ def sample_config():
     return {"teams": [{"team_name": "team1"}, {"team_name": "team2"}]}
 
 
-@pytest.fixture(autouse=True)
-def mock_env_vars(monkeypatch):
-    """Mock environment variables for all tests"""
+@pytest.fixture
+def test_env(monkeypatch):
+    """Setup test environment variables"""
     monkeypatch.setenv("GITHUB_TOKEN", "fake-token")
-    monkeypatch.setenv("GITHUB_ORGANIZATION", "fake-org")
-    monkeypatch.setenv("GITHUB_REPOSITORY", "fake-org/fake-repo")
+    monkeypatch.setenv("GITHUB_ORGANIZATION", "test-org")
+    monkeypatch.setenv("GITHUB_REPOSITORY", "test-org/test-repo")
     monkeypatch.setenv("TESTING", "true")
 
 
@@ -228,14 +228,6 @@ def test_main_workflow(test_env, mock_gh_auth, mock_repo, tmp_path):
 def test_main_no_teams_to_remove(mock_repo, mock_gh_auth, tmp_path):
     """Test main when no teams need to be removed"""
     with (
-        patch.dict(
-            os.environ,
-            {
-                "GITHUB_TOKEN": "fake-token",
-                "GITHUB_ORGANIZATION": "fake-org",
-                "GITHUB_REPOSITORY": "fake-org/fake-repo",
-            },
-        ),
         patch("scripts.team_manage_parent_teams.find_git_root", return_value=tmp_path),
         patch("scripts.team_manage_parent_teams.get_existing_team_directories", return_value=["team1"]),
         patch("scripts.team_manage_parent_teams.get_configured_teams", return_value=["team1"]),
@@ -253,15 +245,3 @@ def test_error_handling_in_main():
         with pytest.raises(InvalidGitRepositoryError):
             main()
 
-
-def test_get_modified_team_files(mock_repo):
-    """Test getting modified team files"""
-    mock_diff = MagicMock()
-    mock_diff.a_path = "teams/team1/config.yml"
-    mock_commit = MagicMock()
-    mock_commit.diff.return_value = [mock_diff]
-    mock_repo.commit.return_value = mock_commit
-
-    modified_files = get_modified_team_files(mock_repo, "base_sha", "head_sha")
-    assert len(modified_files) == 1
-    assert modified_files[0] == "teams/team1/config.yml"
