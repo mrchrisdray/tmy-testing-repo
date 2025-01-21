@@ -26,7 +26,19 @@ def temp_dir():
 
 @pytest.fixture
 def mock_repo():
-    return MagicMock()
+    """Create mock repository with diff functionality"""
+    mock = MagicMock()
+    
+    # Setup diff objects
+    mock_diff = MagicMock()
+    mock_diff.a_path = "teams/test-team/teams.yml"
+    
+    # Setup commit and diff methods
+    mock_commit = MagicMock()
+    mock_commit.diff.return_value = [mock_diff]
+    mock.commit.return_value = mock_commit
+    
+    return mock
 
 
 @pytest.fixture
@@ -44,22 +56,21 @@ def sample_teams_structure(temp_dir):
 
 
 def test_setup_logging():
+    """Test logging configuration"""
     logger = setup_logging()
-    assert isinstance(logger, logging.Logger)
     assert logger.level == logging.INFO
+    assert len(logger.handlers) == 1
+    assert isinstance(logger.handlers[0], logging.StreamHandler)
 
 
-def test_get_modified_team_files_success(mock_repo, sample_teams_structure):
-    # Setup mock comparison
-    mock_comparison = MagicMock()
-    mock_file = MagicMock()
-    mock_file.filename = str(sample_teams_structure / "team1" / "teams.yml")
-    mock_comparison.files = [mock_file]
-    mock_repo.compare.return_value = mock_comparison
-
-    result = get_modified_team_files(mock_repo, "base_sha", "head_sha")
-    assert len(result) == 1
-    assert str(sample_teams_structure / "team1" / "teams.yml") in result
+def test_get_modified_team_files_success(mock_repo):
+    """Test getting modified team files"""
+    base_sha = "base_sha"
+    head_sha = "head_sha"
+    
+    modified_files = get_modified_team_files(mock_repo, base_sha, head_sha)
+    assert len(modified_files) == 1
+    assert modified_files[0] == "teams/test-team/teams.yml"
 
 
 def test_get_modified_team_files_github_error(mock_repo):

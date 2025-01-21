@@ -12,6 +12,13 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+    - uses: actions/create-github-app-token@v1
+      id: app-token
+      with:
+        app-id: ${{ vars.APP_ID }}
+        private-key: ${{ secrets.APP_KEY }}
+        owner: ${{ github.repository_owner }}
+
     - name: Checkout repository
       uses: actions/checkout@v4
 
@@ -26,4 +33,8 @@ jobs:
         pip install pytest PyYAML PyGithub gitpython
 
     - name: Run Unit Tests
+      env:
+        GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
+        GITHUB_ORGANIZATION: ${{ github.repository_owner }}
+        GITHUB_REPOSITORY: ${{ github.repository }}
       run: pytest .github/tests/*.py

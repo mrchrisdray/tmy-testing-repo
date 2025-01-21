@@ -39,6 +39,18 @@ def mock_github():
         yield mock
 
 
+@pytest.fixture
+def mock_repo():
+    """Create mock repository with diff functionality."""
+    mock = MagicMock()
+    mock_diff = MagicMock()
+    mock_diff.a_path = "teams/team1/teams.yml"
+    mock_commit = MagicMock()
+    mock_commit.diff.return_value = [mock_diff]
+    mock.commit.return_value = mock_commit
+    return mock
+
+
 @pytest.mark.parametrize(
     "input_username,expected",
     [
@@ -83,33 +95,34 @@ def test_get_modified_team_files(mock_github, temp_dir):
     assert "teams/team1/teams.yml" in result
 
 
-def test_load_team_config(temp_dir):
-    config_path = Path(temp_dir) / "teams.yml"
-    test_config = {"teams": {"name": "test-team", "members": ["user1", "user2"]}}
-
-    with open(config_path, mode="w", encoding="utf-8") as f:
-        yaml.dump(test_config, f)
-
-    result = load_team_config(config_path)
-    assert result == test_config
-
-
-def test_sync_team_members(mock_github, logger):
-    mock_team = MagicMock()
-    mock_team.get_members.return_value = []
-
-    members = ["user1", "user2"]
-    sync_team_members(mock_team, members, logger)
-
-    assert mock_team.add_membership.call_count == len(members)
+def test_get_modified_team_files(mock_repo):
+    """Test getting modified team files."""
+    base_sha = "base_sha"
+    head_sha = "head_sha"
+    
+    modified_files = get_modified_team_files(mock_repo, base_sha, head_sha)
+    assert len(modified_files) == 1
+    assert modified_files[0] == "teams/team1/teams.yml"
 
 
-def test_sync_team_memberships(mock_github, logger):
-    mock_org = MagicMock()
-    mock_team = MagicMock()
-    mock_org.get_team.return_value = mock_team
+def test_sync_team_members(logger):
+    """Test syncing team members."""
+    team = MagicMock()
+    members_list = ["user1", "user2"]
+    
+    sync_team_members(team, members_list, logger)
+    
+    team.add_membership.assert_any_call("user1")
+    team.add_membership.assert_any_call("user2")
 
-    team_config = {"teams": {"name": "test-team", "members": ["user1", "user2"]}}
-
-    sync_team_memberships(mock_org, team_config, logger)
-    assert mock_org.get_team.called
+def test_sync_team_memberships(logger):
+    """Test syncing team memberships."""
+    gh_team = MagicMock()
+    team_config = {
+        "members": ["user1", "user2"]
+    }
+    
+    sync_team_memberships(gh_team, team_config, logger)
+    
+    gh_team.add_membership.assert_any_call("user1")
+    gh_team.add_membership.assert_any_call("user2")

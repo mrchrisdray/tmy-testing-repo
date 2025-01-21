@@ -18,8 +18,15 @@ def temp_repo_root(tmp_path):
 
 @pytest.fixture
 def sample_team_config():
-    return {"description": "Test Team", "project": "Test Project", "default_repositories": ["repo1", "repo2"]}
-
+    return {
+        "description": "Test Team",
+        "project": "Test Project",
+        "default_repositories": ["repo1", "repo2"],
+        "repository_permissions": {
+            "repo1": "admin",
+            "repo2": "maintain"
+        }
+    }
 
 @pytest.fixture
 def default_sub_teams():
@@ -36,22 +43,31 @@ def test_load_yaml_config(temp_repo_root):
     assert result == test_data
 
 
-def test_create_team_directory(temp_repo_root, sample_team_config, default_sub_teams):
+def test_create_team_directory(temp_repo_root, sample_team_config):
+    """Test creating a new team directory"""
     team_name = "test-team"
-    create_team_directory(team_name, sample_team_config, default_sub_teams, temp_repo_root)
-
+    result = create_team_directory(temp_repo_root, team_name, sample_team_config)
+    
+    assert result is True
     team_dir = temp_repo_root / "teams" / team_name
     assert team_dir.exists()
-    assert (team_dir / "teams.yml").exists()
+    
+    config_file = team_dir / "config.yml"
+    assert config_file.exists()
+    
+    with open(config_file, 'r') as f:
+        saved_config = yaml.safe_load(f)
+    assert saved_config == sample_team_config
 
 
-def test_create_existing_team_directory(temp_repo_root, sample_team_config, default_sub_teams):
+def test_create_existing_team_directory(temp_repo_root, sample_team_config):
+    """Test handling existing team directory"""
     team_name = "existing-team"
     team_dir = temp_repo_root / "teams" / team_name
     team_dir.mkdir(parents=True)
-
-    create_team_directory(team_name, sample_team_config, default_sub_teams, temp_repo_root)
-    assert team_dir.exists()
+    
+    result = create_team_directory(temp_repo_root, team_name, sample_team_config)
+    assert result is False
 
 
 def test_indent_dumper():
