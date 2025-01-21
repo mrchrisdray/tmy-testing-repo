@@ -224,13 +224,14 @@ def test_main_workflow(test_env, mock_gh_auth, tmp_path):
         main()
         mock_gh_auth.get_organization.return_value.get_team_by_slug.assert_called_with("team2")
 
+
 def test_main_no_teams_to_remove(mock_gh_auth, tmp_path):
     """Test main when no teams need to be removed"""
     with patch.multiple(
         "scripts.team_manage_parent_teams",
         find_git_root=lambda: tmp_path,
         get_existing_team_directories=lambda x: ["team1"],
-        get_configured_teams=lambda x: ["team1"]
+        get_configured_teams=lambda x: ["team1"],
     ):
         main()
         mock_gh_auth.get_organization.return_value.get_team_by_slug.assert_not_called()
