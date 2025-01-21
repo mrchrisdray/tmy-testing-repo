@@ -244,4 +244,3 @@ def test_error_handling_in_main():
     with patch("scripts.team_manage_parent_teams.find_git_root", side_effect=InvalidGitRepositoryError):
         with pytest.raises(InvalidGitRepositoryError):
             main()
-
