@@ -71,7 +71,7 @@ def mock_github():
 
 @pytest.fixture
 def mock_github_auth():
-    with patch('github.Github') as mock_gh:
+    with patch("github.Github") as mock_gh:
         mock_instance = MagicMock()
         mock_org = MagicMock()
         mock_instance.get_user.return_value.login = "test-user"
