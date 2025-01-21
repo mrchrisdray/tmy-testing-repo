@@ -53,7 +53,7 @@ def test_create_team_directory(temp_repo_root, sample_team_config):
     config_file = team_dir / "config.yml"
     assert config_file.exists()
 
-    with open(config_file, "r") as f:
+    with open(config_file, mode="r", encoding="utf-8") as f:
         saved_config = yaml.safe_load(f)
     assert saved_config == sample_team_config
 

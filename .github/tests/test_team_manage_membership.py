@@ -4,7 +4,6 @@ from pathlib import Path
 from unittest.mock import patch, MagicMock
 import shutil
 import tempfile
-import yaml
 import pytest
 
 # Add script directory to Python path
@@ -13,7 +12,6 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from scripts.team_manage_membership import (
     normalize_username,
     get_all_team_files,
-    load_team_config,
     get_modified_team_files,
     sync_team_members,
     sync_team_memberships,
@@ -79,20 +77,6 @@ def test_get_all_team_files(temp_dir):
     assert len(result) == 2
     assert str(team1_file) in result
     assert str(team2_file) in result
-
-
-@patch("github.Github")
-def test_get_modified_team_files(mock_github, temp_dir):
-    mock_repo = MagicMock()
-    mock_comparison = MagicMock()
-    mock_file = MagicMock()
-    mock_file.filename = "teams/team1/teams.yml"
-    mock_comparison.files = [mock_file]
-    mock_repo.compare.return_value = mock_comparison
-
-    result = get_modified_team_files(mock_repo, "base_sha", "head_sha")
-    assert len(result) == 1
-    assert "teams/team1/teams.yml" in result
 
 
 def test_get_modified_team_files(mock_repo):
