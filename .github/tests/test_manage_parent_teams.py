@@ -77,15 +77,15 @@ def mock_gh_auth():
         mock_instance = MagicMock()
         mock_org = MagicMock()
         mock_team = MagicMock()
-        
+
         # Setup organization
         mock_org.get_team_by_slug = MagicMock(return_value=mock_team)
         mock_instance.get_organization = MagicMock(return_value=mock_org)
-        
+
         # Setup team
         mock_team.name = "team2"
         mock_team.delete = MagicMock()
-        
+
         mock_gh.return_value = mock_instance
         yield mock_instance
 
@@ -228,7 +228,7 @@ def test_main_workflow(test_env, mock_gh_auth, tmp_path):
     ):
         # Execute main
         main()
-        
+
         # Verify GitHub operations
         mock_gh_auth.get_organization().get_team_by_slug.assert_called_with("team2")
 
