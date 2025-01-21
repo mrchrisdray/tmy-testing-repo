@@ -96,28 +96,22 @@ def test_sync_team_members(logger):
     members_list = ["user1", "user2"]
     gh = MagicMock()
     gh.get_user.side_effect = lambda x: MagicMock(login=x)
-    
+
     sync_team_members(gh, team, "test-team", members_list, logger)
-    
+
     assert team.add_membership.call_count == 2
-    team.add_membership.assert_has_calls([
-        call(gh.get_user("user1"), role="member"),
-        call(gh.get_user("user2"), role="member")
-    ])
+    team.add_membership.assert_has_calls(
+        [call(gh.get_user("user1"), role="member"), call(gh.get_user("user2"), role="member")]
+    )
 
 
 def test_sync_team_memberships(logger):
     """Test syncing team memberships"""
     gh_team = MagicMock()
-    team_config = {
-        "teams": {
-            "team_name": "test-team",
-            "members": ["user1", "user2"]
-        }
-    }
+    team_config = {"teams": {"team_name": "test-team", "members": ["user1", "user2"]}}
     gh = MagicMock()
     org = MagicMock()
-    
+
     sync_team_memberships(gh, org, team_config, logger)
-    
+
     org.get_team_by_slug.assert_called_once_with("test-team")

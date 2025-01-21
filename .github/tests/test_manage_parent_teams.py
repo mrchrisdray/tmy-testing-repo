@@ -72,23 +72,18 @@ def mock_github():
 @pytest.fixture
 def mock_gh_auth():
     """Mock GitHub authentication and basic operations"""
-    with patch('github.Github') as mock_gh:
+    with patch("github.Github") as mock_gh:
         mock_instance = MagicMock()
         mock_org = MagicMock()
         mock_team = MagicMock()
-        
+
         # Setup authentication chain
         mock_instance.get_user.return_value.login = "test-user"
         mock_org.get_team_by_slug.return_value = mock_team
         mock_instance.get_organization.return_value = mock_org
         mock_gh.return_value = mock_instance
-        
-        return {
-            "gh": mock_gh,
-            "instance": mock_instance,
-            "org": mock_org,
-            "team": mock_team
-        }
+
+        return {"gh": mock_gh, "instance": mock_instance, "org": mock_org, "team": mock_team}
 
 
 @pytest.fixture
@@ -218,13 +213,13 @@ def test_commit_changes(mock_repo):
 def test_main_workflow(test_env, mock_gh_auth, mock_repo, tmp_path):
     """Test the main workflow"""
     with patch.multiple(
-        'scripts.team_manage_parent_teams',
+        "scripts.team_manage_parent_teams",
         find_git_root=lambda: tmp_path,
         get_existing_team_directories=lambda x: ["team1", "team2"],
         get_configured_teams=lambda x: ["team1"],
         delete_github_team=lambda x, y: True,
         delete_team_directory=lambda x, y: True,
-        commit_changes=lambda x, y, z: None
+        commit_changes=lambda x, y, z: None,
     ):
         main()
         mock_gh_auth["org"].get_team_by_slug.assert_called_with("team2")
@@ -266,7 +261,7 @@ def test_get_modified_team_files(mock_repo):
     mock_commit = MagicMock()
     mock_commit.diff.return_value = [mock_diff]
     mock_repo.commit.return_value = mock_commit
-    
+
     modified_files = get_modified_team_files(mock_repo, "base_sha", "head_sha")
     assert len(modified_files) == 1
     assert modified_files[0] == "teams/team1/config.yml"
