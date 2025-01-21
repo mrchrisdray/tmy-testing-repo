@@ -83,7 +83,7 @@ def mock_gh_auth():
         mock_instance.get_organization.return_value = mock_org
         mock_gh.return_value = mock_instance
 
-        yield {"gh": mock_gh, "instance": mock_instance, "org": mock_org, "team": mock_team}
+        yield mock_instance
 
 
 @pytest.fixture
