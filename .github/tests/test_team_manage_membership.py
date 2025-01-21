@@ -40,13 +40,18 @@ def mock_github():
 
 @pytest.fixture
 def mock_repo():
-    """Create mock repository with diff functionality."""
+    """Create mock repository with diff functionality"""
     mock = MagicMock()
+    
+    # Setup diff objects
     mock_diff = MagicMock()
     mock_diff.a_path = "teams/team1/teams.yml"
+    
+    # Setup commit and diff chain
     mock_commit = MagicMock()
     mock_commit.diff.return_value = [mock_diff]
     mock.commit.return_value = mock_commit
+    
     return mock
 
 
@@ -100,10 +105,10 @@ def test_sync_team_members(logger):
     sync_team_members(gh, team, "test-team", members_list, logger)
 
     assert team.add_membership.call_count == 2
-    team.add_membership.assert_has_calls(
-        [call(gh.get_user("user1"), role="member"), call(gh.get_user("user2"), role="member")]
-    )
-
+    team.add_membership.assert_has_calls([
+        call(gh.get_user("user1")),
+        call(gh.get_user("user2"))
+    ])
 
 def test_sync_team_memberships(logger):
     """Test syncing team memberships"""
