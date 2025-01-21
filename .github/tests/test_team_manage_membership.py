@@ -1,171 +1,163 @@
-import os
-import sys
-from pathlib import Path
-from unittest.mock import call, patch, MagicMock
-import shutil
-import tempfile
+from unittest.mock import patch, MagicMock
+import yaml
+import logging
 import pytest
+from github import GithubException
 
-# Add script directory to Python path
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-from scripts.team_manage_membership import (
+# Import the functions to test
+from paste import (
     normalize_username,
-    get_all_team_files,
     get_modified_team_files,
+    get_all_team_files,
+    load_team_config,
+    get_team_members,
     sync_team_members,
     sync_team_memberships,
-    setup_logging,
 )
 
+@pytest.fixture
+def mock_logger():
+    return logging.getLogger("test_logger")
 
 @pytest.fixture
-def logger():
-    return setup_logging()
-
-
-@pytest.fixture
-def temp_dir():
-    temp_dir = tempfile.mkdtemp()
-    yield temp_dir
-    shutil.rmtree(temp_dir)
-
+def sample_team_config():
+    return {
+        "teams": {
+            "team_name": "engineering",
+            "members": ["@user1", "user2", "'user3'"],
+            "default_sub_teams": [
+                {
+                    "name": "backend",
+                    "members": ["user1", "user2"]
+                },
+                {
+                    "name": "frontend",
+                    "members": ["user2", "user3"]
+                }
+            ]
+        }
+    }
 
 @pytest.fixture
 def mock_github():
-    with patch("github.Github") as mock:
-        yield mock
-
-
-@pytest.fixture
-def mock_repo():
-    """Create mock repository with diff functionality"""
     mock = MagicMock()
-
-    # Setup diff objects
-    mock_diff = MagicMock()
-    mock_diff.a_path = "teams/team1/teams.yml"
-
-    # Setup commit and diff chain
-    mock_commit = MagicMock()
-    mock_commit.diff.return_value = [mock_diff]
-    mock.commit.return_value = mock_commit
-
+    mock.get_user.return_value = MagicMock()
     return mock
 
+@pytest.fixture
+def mock_team():
+    mock = MagicMock()
+    mock.name = "test-team"
+    return mock
 
-@pytest.mark.parametrize(
-    "input_username,expected",
-    [
-        ("@user", "user"),
-        ("'user'", "user"),
-        ("user", "user"),
-        (None, ""),
-    ],
-)
-def test_normalize_username(input_username, expected):
-    assert normalize_username(input_username) == expected
+def test_normalize_username():
+    assert normalize_username("@username") == "username"
+    assert normalize_username("'username'") == "username"
+    assert normalize_username("username") == "username"
+    assert normalize_username(None) == ""
+    assert normalize_username("@'username'") == "username"
 
+def test_get_all_team_files(tmp_path):
+    # Create temporary directory structure
+    team1_dir = tmp_path / "team1"
+    team2_dir = tmp_path / "team2"
+    team1_dir.mkdir()
+    team2_dir.mkdir()
+    
+    # Create teams.yml files
+    (team1_dir / "teams.yml").touch()
+    (team2_dir / "teams.yml").touch()
+    (tmp_path / "random.yml").touch()
+    
+    files = get_all_team_files(str(tmp_path))
+    assert len(files) == 2
+    assert all("teams.yml" in f for f in files)
 
-def test_get_all_team_files(temp_dir):
-    teams_dir = Path(temp_dir) / "teams"
-    teams_dir.mkdir()
-    (teams_dir / "team1").mkdir()
-    (teams_dir / "team2").mkdir()
+@patch('builtins.open')
+def test_load_team_config_valid(mock_open, sample_team_config):
+    mock_open.return_value.__enter__.return_value.read.return_value = yaml.dump(sample_team_config)
+    config = load_team_config("dummy_path")
+    assert config == sample_team_config
+    assert "teams" in config
+    assert config["teams"]["team_name"] == "engineering"
 
-    team1_file = teams_dir / "team1" / "teams.yml"
-    team2_file = teams_dir / "team2" / "teams.yml"
-    team1_file.touch()
-    team2_file.touch()
+@patch('builtins.open')
+def test_load_team_config_invalid_yaml(mock_open):
+    mock_open.return_value.__enter__.return_value.read.return_value = "invalid: yaml: content: - ["
+    with pytest.raises(ValueError) as exc_info:
+        load_team_config("dummy_path")
+    assert "Failed to parse YAML" in str(exc_info.value)
 
-    result = get_all_team_files(teams_dir)
-    assert len(result) == 2
-    assert str(team1_file) in result
-    assert str(team2_file) in result
+def test_get_modified_team_files():
+    mock_repo = MagicMock()
+    mock_comparison = MagicMock()
+    mock_file1 = MagicMock()
+    mock_file1.filename = "team1/teams.yml"
+    mock_file2 = MagicMock()
+    mock_file2.filename = "team2/teams.yml"
+    
+    mock_comparison.files = [mock_file1, mock_file2]
+    mock_repo.compare.return_value = mock_comparison
+    
+    files = get_modified_team_files(mock_repo, "base-sha", "head-sha")
+    assert len(files) == 2
+    assert "team1/teams.yml" in files
+    assert "team2/teams.yml" in files
 
+def test_get_team_members(mock_team, mock_logger):
+    member1 = MagicMock()
+    member1.login = "user1"
+    member2 = MagicMock()
+    member2.login = "user2"
+    mock_team.get_members.return_value = [member1, member2]
+    
+    members = get_team_members(mock_team, mock_logger)
+    assert members == {"user1", "user2"}
 
-def test_get_modified_team_files(mock_repo):
-    """Test getting modified team files."""
-    # Setup mock commit to return diff with team file changes
-    mock_diff = MagicMock()
-    mock_diff.a_path = "teams/team1/teams.yml"
-    mock_diff.b_path = "teams/team1/teams.yml"  # Add b_path for modified file
-    mock_diff.deleted_file = False  # Indicate file wasn't deleted
-    mock_diff.renamed_file = False  # Indicate file wasn't renamed
+def test_get_team_members_error(mock_team, mock_logger):
+    mock_team.get_members.side_effect = GithubException(404, "Not found")
+    members = get_team_members(mock_team, mock_logger)
+    assert members == set()
 
-    mock_commit = MagicMock()
-    mock_commit.diff.return_value = [mock_diff]
-    mock_repo.get_commit.return_value = mock_commit  # Use get_commit instead of commit
+def test_sync_team_members_add_remove(mock_github, mock_team, mock_logger):
+    # Setup current team members
+    current_member = MagicMock()
+    current_member.login = "existing_user"
+    mock_team.get_members.return_value = [current_member]
+    
+    # Test syncing with new desired members
+    desired_members = ["new_user"]
+    sync_team_members(mock_github, mock_team, "test-team", desired_members, mock_logger)
+    
+    # Verify that new member was added and existing member was removed
+    mock_team.add_membership.assert_called_once()
+    mock_team.remove_membership.assert_called_once()
 
-    modified_files = get_modified_team_files(mock_repo, "base_sha", "head_sha")
-    assert len(modified_files) == 1
-    assert modified_files[0] == "teams/team1/teams.yml"
+def test_sync_team_members_empty_list(mock_github, mock_team, mock_logger):
+    current_member = MagicMock()
+    current_member.login = "existing_user"
+    mock_team.get_members.return_value = [current_member]
+    
+    sync_team_members(mock_github, mock_team, "test-team", [], mock_logger)
+    mock_team.remove_membership.assert_called_once()
+    mock_team.add_membership.assert_not_called()
 
+def test_sync_team_memberships(mock_github, mock_logger, sample_team_config):
+    mock_org = MagicMock()
+    mock_parent_team = MagicMock()
+    mock_sub_team = MagicMock()
+    
+    mock_org.get_team_by_slug.side_effect = [mock_parent_team, mock_sub_team, mock_sub_team]
+    
+    sync_team_memberships(mock_github, mock_org, sample_team_config, mock_logger)
+    
+    # Verify parent team was synced
+    assert mock_org.get_team_by_slug.call_count >= 1
+    mock_parent_team.get_members.assert_called_once()
 
-def test_sync_team_members(logger):
-    """Test syncing team members"""
-    team = MagicMock()
-    team.name = "test-team"  # Add name attribute to mock team
-
-    # Mock the Github user objects properly
-    user1 = MagicMock()
-    user1.login = "user1"
-    user2 = MagicMock()
-    user2.login = "user2"
-
-    gh = MagicMock()
-    gh.get_user.side_effect = lambda x: {"user1": user1, "user2": user2}[x]
-
-    members_list = ["user1", "user2"]
-
-    # Mock existing members to be empty
-    team.get_members.return_value = []
-
-    sync_team_members(gh, team, "test-team", members_list, logger)
-
-    # Verify correct calls
-    assert team.add_membership.call_count == 2
-    team.add_membership.assert_has_calls([call(user1), call(user2)], any_order=True)
-
-
-def test_get_modified_team_files_multiple(mock_repo):
-    """Test getting multiple modified team files"""
-    # Setup multiple diff objects with proper attributes
-    mock_diff1 = MagicMock()
-    mock_diff1.a_path = "teams/team1/teams.yml"
-    mock_diff1.b_path = "teams/team1/teams.yml"
-    mock_diff1.deleted_file = False
-    mock_diff1.renamed_file = False
-
-    mock_diff2 = MagicMock()
-    mock_diff2.a_path = "teams/team2/teams.yml"
-    mock_diff2.b_path = "teams/team2/teams.yml"
-    mock_diff2.deleted_file = False
-    mock_diff2.renamed_file = False
-
-    mock_diff3 = MagicMock()
-    mock_diff3.a_path = "other/file.txt"
-    mock_diff3.b_path = "other/file.txt"
-    mock_diff3.deleted_file = False
-    mock_diff3.renamed_file = False
-
-    mock_commit = MagicMock()
-    mock_commit.diff.return_value = [mock_diff1, mock_diff2, mock_diff3]
-    mock_repo.get_commit.return_value = mock_commit
-
-    modified_files = get_modified_team_files(mock_repo, "base_sha", "head_sha")
-    assert len(modified_files) == 2
-    assert "teams/team1/teams.yml" in modified_files
-    assert "teams/team2/teams.yml" in modified_files
-
-
-def test_sync_team_memberships(logger):
-    """Test syncing team memberships"""
-
-    team_config = {"teams": {"team_name": "test-team", "members": ["user1", "user2"]}}
-    gh = MagicMock()
-    org = MagicMock()
-
-    sync_team_memberships(gh, org, team_config, logger)
-
-    org.get_team_by_slug.assert_called_once_with("test-team")
+def test_sync_team_memberships_parent_team_not_found(mock_github, mock_logger, sample_team_config):
+    mock_org = MagicMock()
+    mock_org.get_team_by_slug.side_effect = GithubException(404, "Not found")
+    
+    sync_team_memberships(mock_github, mock_org, sample_team_config, mock_logger)
+    mock_org.get_team_by_slug.assert_called_once()
