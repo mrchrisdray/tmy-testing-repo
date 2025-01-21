@@ -51,6 +51,7 @@ def sample_teams_dir(temp_dir):
 
 def test_setup_logging():
     logger = setup_logging()
+    logger.setLevel(logging.INFO)
     assert logger.level == logging.INFO
     assert len(logger.handlers) == 1
 

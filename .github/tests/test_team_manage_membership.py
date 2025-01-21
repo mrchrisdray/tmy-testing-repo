@@ -1,4 +1,5 @@
 import os
+from subprocess import call
 import sys
 from pathlib import Path
 from unittest.mock import patch, MagicMock
@@ -90,22 +91,15 @@ def test_get_modified_team_files(mock_repo):
 
 
 def test_sync_team_members(logger):
-    """Test syncing team members."""
     team = MagicMock()
     members_list = ["user1", "user2"]
-
+    
     sync_team_members(team, members_list, logger)
-
-    team.add_membership.assert_any_call("user1")
-    team.add_membership.assert_any_call("user2")
-
+    team.add_membership.assert_has_calls([call("user1"), call("user2")])
 
 def test_sync_team_memberships(logger):
-    """Test syncing team memberships."""
     gh_team = MagicMock()
     team_config = {"members": ["user1", "user2"]}
-
+    
     sync_team_memberships(gh_team, team_config, logger)
-
-    gh_team.add_membership.assert_any_call("user1")
-    gh_team.add_membership.assert_any_call("user2")
+    gh_team.add_membership.assert_has_calls([call("user1"), call("user2")])

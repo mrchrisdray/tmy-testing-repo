@@ -70,6 +70,17 @@ def mock_github():
 
 
 @pytest.fixture
+def mock_github_auth():
+    with patch('github.Github') as mock_gh:
+        mock_instance = MagicMock()
+        mock_org = MagicMock()
+        mock_instance.get_user.return_value.login = "test-user"
+        mock_instance.get_organization.return_value = mock_org
+        mock_gh.return_value = mock_instance
+        return {"instance": mock_instance, "org": mock_org}
+
+
+@pytest.fixture
 def sample_config():
     return {"teams": [{"team_name": "team1"}, {"team_name": "team2"}]}
 
@@ -170,15 +181,19 @@ def test_commit_changes(mock_repo):
     mock_repo.remote().push.assert_called_once()
 
 
-@patch.dict(
-    os.environ,
-    {"GITHUB_TOKEN": "fake-token", "GITHUB_ORGANIZATION": "fake-org", "GITHUB_REPOSITORY": "fake-org/fake-repo"},
-)
-def test_main_workflow(mock_repo, mock_github, tmp_path):
+def test_main_workflow(mock_repo, mock_github, mock_github_auth, tmp_path):
     """Test the main workflow"""
     with (
+        patch.dict(
+            os.environ,
+            {
+                "GITHUB_TOKEN": "fake-token",
+                "GITHUB_ORGANIZATION": "fake-org",
+                "GITHUB_REPOSITORY": "fake-org/fake-repo",
+            },
+        ),
         patch("pathlib.Path.exists", return_value=True),
-        patch("scripts.team_manage_parent_teams.find_git_root", return_value=Path("/fake/repo/path")),
+        patch("scripts.team_manage_parent_teams.find_git_root", return_value=tmp_path),
         patch("scripts.team_manage_parent_teams.get_existing_team_directories", return_value=["team1", "team2"]),
         patch("scripts.team_manage_parent_teams.get_configured_teams", return_value=["team1"]),
         patch("scripts.team_manage_parent_teams.delete_github_team", return_value=True),
@@ -189,7 +204,7 @@ def test_main_workflow(mock_repo, mock_github, tmp_path):
         main()
 
         # Verify GitHub operations
-        mock_github["org"].get_team_by_slug.assert_called_with("team2")
+        mock_github_auth.get_organization.return_value.get_team_by_slug.assert_called_with("team2")
 
         # Verify deletion operations
         mock_github["team"].delete.assert_called_once()
