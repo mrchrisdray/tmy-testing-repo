@@ -42,4 +42,4 @@ jobs:
         PYTHONPATH: ${{ github.workspace }}
         TESTING: "True"
       run: |
-        pytest .github/tests/test_manage_parent_teams.py -v --cov=scripts --cov-report=term-missing
+        pytest .github/tests/test_team_manage_membership.py -v --cov=scripts --cov-report=term-missing
