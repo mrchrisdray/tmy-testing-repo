@@ -77,16 +77,22 @@ def mock_gh_auth():
         mock_instance = MagicMock()
         mock_org = MagicMock()
         mock_team = MagicMock()
-
-        # Setup organization
+        
+        # Setup organization and team chain
         mock_org.get_team_by_slug = MagicMock(return_value=mock_team)
         mock_instance.get_organization = MagicMock(return_value=mock_org)
-
-        # Setup team
+        
+        # Setup team attributes
         mock_team.name = "team2"
         mock_team.delete = MagicMock()
-
+        
+        # Configure the mock chain
         mock_gh.return_value = mock_instance
+        
+        # Store references for assertions
+        mock_instance._org = mock_org
+        mock_instance._team = mock_team
+        
         yield mock_instance
 
 
@@ -216,6 +222,10 @@ def test_commit_changes(mock_repo):
 
 def test_main_workflow(test_env, mock_gh_auth, tmp_path):
     """Test the main workflow"""
+    # Get stored references
+    mock_org = mock_gh_auth._org
+    mock_team = mock_gh_auth._team
+    
     with patch.multiple(
         "scripts.team_manage_parent_teams",
         Github=MagicMock(return_value=mock_gh_auth),
@@ -230,7 +240,8 @@ def test_main_workflow(test_env, mock_gh_auth, tmp_path):
         main()
 
         # Verify GitHub operations
-        mock_gh_auth.get_organization().get_team_by_slug.assert_called_with("team2")
+        mock_org.get_team_by_slug.assert_called_with("team2")
+        mock_team.delete.assert_called_once()
 
 
 def test_main_no_teams_to_remove(mock_gh_auth, tmp_path):
