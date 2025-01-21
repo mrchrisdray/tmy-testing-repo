@@ -39,4 +39,7 @@ jobs:
         GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
         GITHUB_ORGANIZATION: ${{ github.repository_owner }}
         GITHUB_REPOSITORY: ${{ github.repository }}
-      run: pytest .github/tests/*.py
+        PYTHONPATH: ${{ github.workspace }}
+        TESTING: "True"
+      run: |
+        pytest .github/tests/*.py -v --cov=scripts --cov-report=term-missing

@@ -5,6 +5,8 @@
         "pytest"
     ],
     "cSpell.words": [
+        "addopts",
+        "autouse",
         "caplog",
         "docparams",
         "docstrings",
@@ -17,10 +19,12 @@
         "pygh",
         "pylint",
         "pylintrc",
+        "PYTHONPATH",
         "pyyaml",
         "rcfile",
         "subteam",
         "subteams",
+        "testpaths",
         "tmpdirname",
         "venv"
     ]
