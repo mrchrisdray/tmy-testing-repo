@@ -107,7 +107,7 @@ def test_sync_team_members(logger):
 
 def test_sync_team_memberships(logger):
     """Test syncing team memberships"""
-    gh_team = MagicMock()
+
     team_config = {"teams": {"team_name": "test-team", "members": ["user1", "user2"]}}
     gh = MagicMock()
     org = MagicMock()
