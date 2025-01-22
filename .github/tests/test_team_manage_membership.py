@@ -118,8 +118,9 @@ def test_load_team_config_invalid_yaml(mock_open):
         load_team_config("dummy_path")
     assert "Failed to parse YAML" in str(exc_info.value)
 
+
 @timeout_decorator.timeout(TEST_TIMEOUT)
-@patch('builtins.open', side_effect=FileNotFoundError)
+@patch("builtins.open", side_effect=FileNotFoundError)
 def test_load_team_config_file_not_found(mock_open):
     with pytest.raises(FileNotFoundError):
         load_team_config("non_existent_path")
