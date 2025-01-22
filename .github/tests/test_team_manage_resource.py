@@ -98,7 +98,7 @@ def test_sync_team_repos_remove_repo(mock_org, mock_team, mock_logger):
 
         # Verify
         mock_remove.assert_called_once()
-        mock_logger.info.assert_called_with(f"Removing old-repo from test-team")
+        mock_logger.info.assert_called_with("Removing old-repo from test-team")
 
 
 def test_sync_team_repos_update_permissions(mock_org, mock_team, mock_logger):
