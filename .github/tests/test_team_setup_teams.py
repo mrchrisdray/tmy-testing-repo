@@ -20,16 +20,15 @@ def temp_repo_root(tmp_path):
 def sample_team_config():
     """Create sample team configuration dictionary"""
     return {
-        "teams": [{
-            "team_name": "test-team",
-            "description": "Test Team",
-            "project": "Test Project",
-            "default_repositories": ["repo1", "repo2"],
-            "repository_permissions": {
-                "repo1": "admin",
-                "repo2": "maintain"
+        "teams": [
+            {
+                "team_name": "test-team",
+                "description": "Test Team",
+                "project": "Test Project",
+                "default_repositories": ["repo1", "repo2"],
+                "repository_permissions": {"repo1": "admin", "repo2": "maintain"},
             }
-        }]
+        ]
     }
 
 
@@ -52,12 +51,9 @@ def test_create_team_directory(temp_repo_root, default_sub_teams, sample_team_co
     """Test creating a new team directory"""
     team_name = "test-team"
     team_config = sample_team_config["teams"][0]
-    
+
     result = create_team_directory(
-        repo_root=temp_repo_root,
-        team_name=team_name,
-        default_sub_teams=default_sub_teams,
-        team_config=team_config
+        repo_root=temp_repo_root, team_name=team_name, default_sub_teams=default_sub_teams, team_config=team_config
     )
 
     assert result is True
@@ -73,12 +69,9 @@ def test_create_existing_team_directory(temp_repo_root, default_sub_teams, sampl
 
     team_config = sample_team_config["teams"][0]
     result = create_team_directory(
-        repo_root=temp_repo_root,
-        team_name=team_name,
-        default_sub_teams=default_sub_teams,
-        team_config=team_config
+        repo_root=temp_repo_root, team_name=team_name, default_sub_teams=default_sub_teams, team_config=team_config
     )
-    
+
     assert result is False
 
 
