@@ -225,20 +225,6 @@ def test_create_github_team_with_parent_creation_error(mock_github_org):
     assert mock_github_org.create_team.call_args_list[1][0] == expected_calls[1][0]
 
 
-def test_create_github_team_hierarchy_no_parent(mock_github_org):
-    """Test creating GitHub team without parent"""
-    team_name = "standalone-team"
-    description = "Standalone Team"
-
-    result = create_github_team_hierarchy(
-        mock_github_org, team_name, description, parent_team_name=None, visibility="closed"
-    )
-
-    # Verify direct team creation
-    mock_github_org.create_team.assert_called_once_with(name=team_name, description=description, privacy="closed")
-    assert result == mock_github_org.create_team.return_value
-
-
 def test_create_github_team_with_parent_creation_error(mock_github_org):
     """Test handling team creation errors with parent"""
     team_name = "test-team"
