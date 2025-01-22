@@ -81,7 +81,8 @@ def test_sync_team_repos_add_new_repo(mock_org, mock_team, mock_logger):
 def test_sync_team_repos_remove_repo(mock_org, mock_team, mock_logger):
     # Setup
     desired_repos = []
-    mock_repo = MagicMock(name="old-repo")
+    mock_repo = MagicMock()
+    mock_repo.name = "old-repo"
     mock_team.get_repos.return_value = [mock_repo]
 
     with patch("scripts.team_manage_resource.remove_team_repository") as mock_remove:
