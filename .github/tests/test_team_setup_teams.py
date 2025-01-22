@@ -16,7 +16,7 @@ from scripts.team_setup_teams import (
     find_git_root,
     commit_changes,
     create_github_team,
-    main
+    main,
 )
 
 
