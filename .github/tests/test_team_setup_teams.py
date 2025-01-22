@@ -173,46 +173,65 @@ def test_create_github_team_existing(mock_github_org):
     assert result == mock_team
 
 
-def test_create_github_team_hierarchy_with_parent(mock_github_org):
-    """Test creating GitHub team hierarchy with parent team"""
-    parent_team_name = "parent-team"
-    team_name = "child-team"
-    description = "Child Team"
-
-    # Mock parent team
-    mock_parent_team = Mock()
-    mock_parent_team.id = 123
-    mock_github_org.get_team_by_slug.return_value = mock_parent_team
-
+def test_create_github_team_hierarchy_no_parent(mock_github_org):
+    """Test creating GitHub team without parent"""
+    team_name = "standalone-team"
+    description = "Standalone Team"
+    
+    # Setup mock behavior for team lookup (simulate team doesn't exist)
+    mock_github_org.get_team_by_slug.side_effect = Exception("Team not found")
+    
+    # Setup mock for team creation
+    mock_team = Mock(name="created_team")
+    mock_github_org.create_team.return_value = mock_team
+    
     result = create_github_team_hierarchy(
-        mock_github_org, team_name, description, parent_team_name, visibility="closed"
+        mock_github_org,
+        team_name,
+        description,
+        parent_team_name=None,
+        visibility="closed"
     )
+    
+    # Verify direct team creation
+    mock_github_org.create_team.assert_called_once_with(
+        name=team_name,
+        description=description,
+        privacy="closed"
+    )
+    assert result == mock_team
 
-    # Verify parent team was retrieved
-    mock_github_org.get_team_by_slug.assert_called_with(parent_team_name)
 
-    # Verify team creation with parent
-    mock_github_org.create_team.assert_called_once()
-    assert result == mock_github_org.create_team.return_value
-
-
-def test_create_github_team_hierarchy_parent_error(mock_github_org):
-    """Test handling parent team errors in hierarchy creation"""
+def test_create_github_team_with_parent_creation_error(mock_github_org):
+    """Test handling team creation errors with parent"""
     team_name = "test-team"
     description = "Test Team"
-    parent_team_name = "nonexistent-parent"
-
-    # Mock parent team lookup failure
-    mock_github_org.get_team_by_slug.side_effect = Exception("Parent team not found")
-
-    result = create_github_team_hierarchy(
-        mock_github_org, team_name, description, parent_team_name, visibility="closed"
-    )
-
-    # Verify team was created without parent
-    mock_github_org.create_team.assert_called_with(name=team_name, description=description, privacy="closed")
-    assert result == mock_github_org.create_team.return_value
-
+    parent_team = Mock(id=123)
+    
+    # Setup mock for team lookup failure
+    mock_github_org.get_team_by_slug.side_effect = Exception("Team not found")
+    
+    # Setup mock for team creation to fail first with parent, then succeed without
+    mock_github_org.create_team.side_effect = [
+        Exception("Error creating team with parent"),  # First call fails
+        Mock(name="created_team")  # Second call succeeds
+    ]
+    
+    # Create the team
+    create_github_team(mock_github_org, team_name, description, parent_team=parent_team)
+    
+    # Verify both attempts were made
+    expected_calls = [
+        # First attempt with parent
+        ({"name": team_name, "description": description, "privacy": "closed", 
+          "parent_team_id": parent_team.id},),
+        # Second attempt without parent
+        ({"name": team_name, "description": description, "privacy": "closed"},)
+    ]
+    
+    assert mock_github_org.create_team.call_count == 2
+    assert mock_github_org.create_team.call_args_list[0][0] == expected_calls[0][0]
+    assert mock_github_org.create_team.call_args_list[1][0] == expected_calls[1][0]
 
 def test_create_github_team_hierarchy_no_parent(mock_github_org):
     """Test creating GitHub team without parent"""
