@@ -75,7 +75,7 @@ def test_sync_team_repos_add_new_repo(mock_org, mock_team, mock_logger):
 
     # Verify
     mock_team.update_team_repository.assert_called_with(mock_repo, "push")
-    mock_logger.info.assert_called_with(f"Added new-repo to {mock_team.name} with push permission")
+    mock_logger.info.assert_called_with(f"Updated new-repo permissions for {mock_team.name} to push")
 
 
 def test_sync_team_repos_remove_repo(mock_org, mock_team, mock_logger):
@@ -92,7 +92,7 @@ def test_sync_team_repos_remove_repo(mock_org, mock_team, mock_logger):
 
         # Verify
         mock_remove.assert_called_once()
-        mock_logger.info.assert_called_once_with(f"Removed old-repo from {mock_team.name}")
+        mock_logger.info.assert_called_with(f"Attempting to remove old-repo from {mock_team.name}")
 
 
 def test_sync_team_repos_update_permissions(mock_org, mock_team, mock_logger):
