@@ -58,7 +58,7 @@ def sample_team_config():
 @pytest.fixture
 def temp_config_file(tmp_path, sample_team_config):
     config_file = tmp_path / "teams.yml"
-    with open(config_file, "w") as f:
+    with open(config_file, mode="w", encoding='utf-8') as f:
         yaml.dump(sample_team_config, f)
     return str(config_file)
 
@@ -135,7 +135,7 @@ def test_load_team_config_valid(temp_config_file):
 def test_load_team_config_invalid_format(tmp_path):
     # Setup
     invalid_config = tmp_path / "invalid.yml"
-    with open(invalid_config, "w") as f:
+    with open(invalid_config, mode="w", encoding='utf-8') as f:
         f.write("invalid: :")
 
     # Test & Verify
