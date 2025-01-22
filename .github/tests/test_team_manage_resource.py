@@ -74,7 +74,7 @@ def test_sync_team_repos_add_new_repo(mock_org, mock_team, mock_logger):
     sync_team_repos(mock_org, mock_team, desired_repos, "write", mock_logger)
 
     # Verify
-    mock_team.update_team_repository.assert_called_once_with(mock_repo, "push")
+    mock_team.update_team_repository.assert_called_with(mock_repo, "push")
     mock_logger.info.assert_called_with(f"Added new-repo to {mock_team.name} with push permission")
 
 
@@ -92,7 +92,7 @@ def test_sync_team_repos_remove_repo(mock_org, mock_team, mock_logger):
 
         # Verify
         mock_remove.assert_called_once()
-        mock_logger.info.assert_called()
+        mock_logger.info.assert_called_once_with(f"Removed old-repo from {mock_team.name}")
 
 
 def test_sync_team_repos_update_permissions(mock_org, mock_team, mock_logger):
@@ -107,7 +107,7 @@ def test_sync_team_repos_update_permissions(mock_org, mock_team, mock_logger):
     sync_team_repos(mock_org, mock_team, desired_repos, "write", mock_logger)
 
     # Verify
-    mock_team.update_team_repository.assert_called_once_with(mock_repo, "push")
+    mock_team.update_team_repository.assert_called_with(mock_repo, "push")
 
 
 def test_sync_team_repos_github_exception(mock_org, mock_team, mock_logger):
@@ -148,7 +148,7 @@ def test_sync_team_repositories_integration(mock_org, mock_logger, sample_team_c
     # Setup
     parent_team = MagicMock()
     sub_team = MagicMock()
-    mock_org.get_team_by_slug.side_effect = lambda name: {"parent-team": parent_team, "sub-team-1": sub_team}.get(name)
+    mock_org.get_team_by_slug.side_effect = {"parent-team": parent_team, "sub-team-1": sub_team}.get
 
     # Test
     sync_team_repositories(mock_org, sample_team_config, mock_logger)
