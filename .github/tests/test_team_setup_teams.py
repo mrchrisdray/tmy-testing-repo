@@ -177,20 +177,29 @@ def test_create_github_team_hierarchy_no_parent(mock_github_org):
     """Test creating GitHub team without parent"""
     team_name = "standalone-team"
     description = "Standalone Team"
-
+    
     # Setup mock behavior for team lookup (simulate team doesn't exist)
     mock_github_org.get_team_by_slug.side_effect = Exception("Team not found")
-
+    
     # Setup mock for team creation
     mock_team = Mock(name="created_team")
     mock_github_org.create_team.return_value = mock_team
-
+    
     result = create_github_team_hierarchy(
-        mock_github_org, team_name, description, parent_team_name=None, visibility="closed"
+        mock_github_org,
+        team_name,
+        description,
+        parent_team_name=None,
+        visibility="closed"
     )
-
+    
     # Verify direct team creation
-    mock_github_org.create_team.assert_called_once_with(name=team_name, description=description, privacy="closed")
+    mock_github_org.create_team.assert_called_once_with(
+        name=team_name,
+        description=description,
+        privacy="closed",
+        parent_team_id=None
+    )
     assert result == mock_team
 
 
@@ -199,30 +208,39 @@ def test_create_github_team_with_parent_creation_error(mock_github_org):
     team_name = "test-team"
     description = "Test Team"
     parent_team = Mock(id=123)
-
+    
     # Setup mock for team lookup failure
     mock_github_org.get_team_by_slug.side_effect = Exception("Team not found")
-
+    
     # Setup mock for team creation to fail first with parent, then succeed without
     mock_github_org.create_team.side_effect = [
         Exception("Error creating team with parent"),  # First call fails
-        Mock(name="created_team"),  # Second call succeeds
+        Mock(name="created_team")  # Second call succeeds
     ]
-
+    
     # Create the team
     create_github_team(mock_github_org, team_name, description, parent_team=parent_team)
-
+    
+    # Get the actual calls made to create_team
+    actual_calls = mock_github_org.create_team.call_args_list
+    
     # Verify both attempts were made
-    expected_calls = [
-        # First attempt with parent
-        ({"name": team_name, "description": description, "privacy": "closed", "parent_team_id": parent_team.id},),
-        # Second attempt without parent
-        ({"name": team_name, "description": description, "privacy": "closed"},),
-    ]
-
-    assert mock_github_org.create_team.call_count == 2
-    assert mock_github_org.create_team.call_args_list[0][0] == expected_calls[0][0]
-    assert mock_github_org.create_team.call_args_list[1][0] == expected_calls[1][0]
+    assert len(actual_calls) == 2
+    
+    # Verify first call (with parent)
+    assert actual_calls[0].kwargs == {
+        "name": team_name,
+        "description": description,
+        "privacy": "closed",
+        "parent_team_id": parent_team.id
+    }
+    
+    # Verify second call (without parent)
+    assert actual_calls[1].kwargs == {
+        "name": team_name,
+        "description": description,
+        "privacy": "closed"
+    }
 
 
 @patch("scripts.team_setup_teams.find_git_root")
