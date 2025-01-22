@@ -225,22 +225,6 @@ def test_create_github_team_with_parent_creation_error(mock_github_org):
     assert mock_github_org.create_team.call_args_list[1][0] == expected_calls[1][0]
 
 
-def test_create_github_team_with_parent_creation_error(mock_github_org):
-    """Test handling team creation errors with parent"""
-    team_name = "test-team"
-    description = "Test Team"
-    parent_team = Mock(id=123)
-
-    # First attempt with parent fails, second without parent succeeds
-    mock_github_org.create_team.side_effect = [Exception("Error creating team with parent"), Mock(name="created_team")]
-
-    result = create_github_team(mock_github_org, team_name, description, parent_team=parent_team)
-
-    # Verify fallback to creating without parent
-    assert mock_github_org.create_team.call_count == 2
-    assert result == mock_github_org.create_team.return_value
-
-
 @patch("scripts.team_setup_teams.find_git_root")
 @patch("scripts.team_setup_teams.Github")
 def test_main_execution(mock_github, mock_find_git_root, temp_repo_root):
