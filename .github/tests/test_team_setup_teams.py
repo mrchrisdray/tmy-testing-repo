@@ -41,20 +41,20 @@ def test_load_yaml_config(temp_repo_root):
     assert result == test_data
 
 
-def test_create_team_directory(temp_repo_root, sample_team_config):
+def test_create_team_directory(temp_repo_root, default_sub_teams, sample_team_config):
     team_name = "test-team"
-    result = create_team_directory(repo_root=temp_repo_root, team_name=team_name, team_config=sample_team_config)
+    result = create_team_directory(repo_root=temp_repo_root, team_name=team_name, default_sub_teams=default_sub_teams, team_config=sample_team_config)
     assert result is True
     team_dir = temp_repo_root / "teams" / team_name
     assert team_dir.exists()
 
 
-def test_create_existing_team_directory(temp_repo_root, sample_team_config):
+def test_create_existing_team_directory(temp_repo_root, default_sub_teams, sample_team_config):
     """Test handling existing team directory"""
     team_name = "existing-team"
     team_dir = temp_repo_root / "teams" / team_name
     team_dir.mkdir(parents=True)
-    result = create_team_directory(repo_root=temp_repo_root, team_name=team_name, team_config=sample_team_config)
+    result = create_team_directory(repo_root=temp_repo_root, team_name=team_name, default_sub_teams=default_sub_teams, team_config=sample_team_config)
     assert result is False
 
 
