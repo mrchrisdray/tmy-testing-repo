@@ -38,9 +38,12 @@ def mock_repo():
     return mock
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def mock_logger():
-    return MagicMock()
+    """Create a logger instance that's reused across tests"""
+    logger = MagicMock()
+    logger.info = MagicMock()
+    return logger
 
 
 @pytest.fixture
@@ -79,6 +82,7 @@ def test_sync_team_repos_add_new_repo(mock_org, mock_team, mock_logger):
 
 
 def test_sync_team_repos_remove_repo(mock_org, mock_team, mock_logger):
+    """Test removing repository from team"""
     # Setup
     mock_team.name = "test-team"
     desired_repos = []
@@ -94,7 +98,7 @@ def test_sync_team_repos_remove_repo(mock_org, mock_team, mock_logger):
 
         # Verify
         mock_remove.assert_called_once()
-        mock_logger.info.assert_called_with(f"Removing old-repo from {mock_team.name}")
+        mock_logger.info.assert_called_with(f"Removing old-repo from test-team")
 
 
 def test_sync_team_repos_update_permissions(mock_org, mock_team, mock_logger):
