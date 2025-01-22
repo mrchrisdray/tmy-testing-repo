@@ -1,6 +1,6 @@
 import os
 import sys
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import Mock, patch
 from pathlib import Path
 import pytest
 import yaml
@@ -16,8 +16,7 @@ from scripts.team_setup_teams import (
     find_git_root,
     commit_changes,
     create_github_team,
-    create_github_team_hierarchy,
-    main,
+    main
 )
 
 
