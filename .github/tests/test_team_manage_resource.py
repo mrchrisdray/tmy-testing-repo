@@ -97,7 +97,7 @@ def test_sync_team_repos_remove_repo(mock_org, mock_team, mock_logger):
         mock_remove.return_value = True
 
         sync_team_repos(mock_org, mock_team, desired_repos, "read", mock_logger)
-        
+
         # Verify
         mock_remove.assert_called_once_with(
             github_token="fake-token",
