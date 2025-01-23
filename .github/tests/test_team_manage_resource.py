@@ -92,15 +92,16 @@ def test_sync_team_repos_remove_repo(mock_org, mock_team, mock_logger):
     mock_repo.name = "old-repo"
     mock_team.get_repos.return_value = [mock_repo]
 
-    with patch('scripts.team_manage_resource.remove_team_repository') as mock_remove:
+    with patch("scripts.team_manage_resource.remove_team_repository") as mock_remove:
         mock_remove.return_value = True
         mock_remove.assert_called_once_with(
-            github_token='fake-token',
-            org_name='test-org',
-            team_slug='test-team',
-            repo_name='old-repo',
-            logger=mock_logger
+            github_token="fake-token",
+            org_name="test-org",
+            team_slug="test-team",
+            repo_name="old-repo",
+            logger=mock_logger,
         )
+
 
 def test_sync_team_repos_update_permissions(mock_org, mock_team, mock_logger):
     # Setup
