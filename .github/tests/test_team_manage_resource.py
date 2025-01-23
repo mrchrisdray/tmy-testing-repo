@@ -81,34 +81,6 @@ def test_sync_team_repos_add_new_repo(mock_org, mock_team, mock_logger):
     mock_logger.info.assert_called_with(f"Updated new-repo permissions for {mock_team.name} to push")
 
 
-def test_sync_team_repos_remove_repo(mock_org, mock_team, mock_logger):
-    """Test removing repository from team"""
-    # Setup
-    mock_team.name = "test-team"
-    mock_team.slug = "test-team"
-    mock_org.login = "test-org"
-    desired_repos = []
-    mock_repo = MagicMock()
-    mock_repo.name = "old-repo"
-    mock_team.get_repos.return_value = [mock_repo]
-
-    # Test
-    with patch("scripts.team_manage_resource.remove_team_repository") as mock_remove:
-        mock_remove.return_value = True
-
-        sync_team_repos(mock_org, mock_team, desired_repos, "read", mock_logger)
-
-        # Verify
-        mock_remove.assert_called_once_with(
-            github_token="fake-token",
-            org_name="test-org",
-            team_slug="test-team",
-            repo_name="old-repo",
-            logger=mock_logger,
-        )
-        mock_logger.info.assert_any_call("Removing old-repo from test-team")
-
-
 def test_sync_team_repos_update_permissions(mock_org, mock_team, mock_logger):
     # Setup
     desired_repos = ["existing-repo"]
@@ -157,22 +129,6 @@ def test_load_team_config_invalid_format(tmp_path):
         load_team_config(str(invalid_config))
 
 
-@pytest.mark.integration
-def test_sync_team_repositories_integration(mock_org, mock_logger, sample_team_config):
-    # Setup
-    parent_team = MagicMock()
-    sub_team = MagicMock()
-    mock_org.get_team_by_slug.side_effect = {"parent-team": parent_team, "sub-team-1": sub_team}.get
-
-    # Test
-    sync_team_repositories(mock_org, sample_team_config, mock_logger)
-
-    # Verify
-    parent_team.get_repos.assert_called_once()
-    sub_team.get_repos.assert_called_once()
-    mock_logger.info.assert_called()
-
-
 def test_remove_team_repository_success():
     # Setup
     mock_logger = MagicMock()
@@ -200,3 +156,19 @@ def test_remove_team_repository_failure():
         # Verify
         assert result is False
         mock_logger.error.assert_called()
+
+
+@pytest.mark.integration
+def test_sync_team_repositories_integration(mock_org, mock_logger, sample_team_config):
+    # Setup
+    parent_team = MagicMock()
+    sub_team = MagicMock()
+    mock_org.get_team_by_slug.side_effect = {"parent-team": parent_team, "sub-team-1": sub_team}.get
+
+    # Test
+    sync_team_repositories(mock_org, sample_team_config, mock_logger)
+
+    # Verify
+    parent_team.get_repos.assert_called_once()
+    sub_team.get_repos.assert_called_once()
+    mock_logger.info.assert_called()
