@@ -17,6 +17,7 @@ disable =
     W0613, # unused argument
     R0915, # Too many statements
     R0914, # Too many locals
+    W0612, # Unused variable 'mock_gh' (unused-variable)
 
 [BASIC]
 # Test function names can b longer and more descriptive
