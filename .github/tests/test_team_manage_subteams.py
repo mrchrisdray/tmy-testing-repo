@@ -53,7 +53,7 @@ def sample_team_config():
 
 def test_get_modified_team_files_success(mock_github):
     """Test getting modified team files with a successful scenario"""
-    mock_gh, _ = mock_github
+    _ = mock_github
     mock_repo = MagicMock()
 
     # Create mock comparison with modified files
@@ -75,7 +75,7 @@ def test_get_modified_team_files_success(mock_github):
 
 def test_get_modified_team_files_github_error(mock_github):
     """Test handling of GitHub API errors when getting modified files"""
-    mock_gh, _ = mock_github
+    _ = mock_github
     mock_repo = MagicMock()
     mock_repo.compare.side_effect = GithubException(500, "API Error")
 
@@ -112,8 +112,8 @@ def test_load_team_config_invalid_yaml():
 
 def test_get_existing_subteams(mock_github):
     """Test retrieving existing sub-teams"""
-    mock_gh, mock_org = mock_github
-
+    mock_org = mock_github
+    
     # Create mock parent team and sub-teams
     mock_parent_team = MagicMock()
     mock_org.get_team_by_slug.return_value = mock_parent_team
@@ -134,8 +134,8 @@ def test_get_existing_subteams(mock_github):
 
 def test_create_subteam(mock_github, mock_logger, sample_team_config):
     """Test creating a new sub-team"""
-    mock_gh, mock_org = mock_github
-
+    mock_org = mock_github
+    
     # Create mock parent team
     mock_parent_team = MagicMock()
     mock_parent_team.id = 123
@@ -154,7 +154,7 @@ def test_create_subteam(mock_github, mock_logger, sample_team_config):
 
 def test_delete_subteam(mock_github, mock_logger):
     """Test deleting a sub-team"""
-    mock_gh, mock_org = mock_github
+    mock_org = mock_github
 
     # Create mock team to delete
     mock_team = MagicMock()
@@ -170,8 +170,8 @@ def test_delete_subteam(mock_github, mock_logger):
 
 def test_sync_subteams(mock_github, mock_logger, sample_team_config):
     """Test synchronizing sub-teams"""
-    mock_gh, mock_org = mock_github
-
+    mock_org = mock_github
+    
     # Mock existing and desired sub-teams
     mock_parent_team = MagicMock()
     mock_parent_team.id = 123
@@ -206,7 +206,7 @@ def test_main_push_event(monkeypatch, mock_github, mock_logger):
     monkeypatch.setenv("GITHUB_REPOSITORY", "test/repo")
 
     # Mock dependencies
-    mock_gh, mock_org = mock_github
+    mock_gh = mock_github
     mock_repo = MagicMock()
     mock_gh.return_value.get_repo.return_value = mock_repo
 
