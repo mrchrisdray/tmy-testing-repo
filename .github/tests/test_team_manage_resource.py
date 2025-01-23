@@ -85,21 +85,22 @@ def test_sync_team_repos_remove_repo(mock_org, mock_team, mock_logger):
     """Test removing repository from team"""
     # Setup
     mock_team.name = "test-team"
+    mock_team.slug = "test-team"
+    mock_org.login = "test-org"
     desired_repos = []
     mock_repo = MagicMock()
     mock_repo.name = "old-repo"
     mock_team.get_repos.return_value = [mock_repo]
 
-    with patch("scripts.team_manage_resource.remove_team_repository") as mock_remove:
+    with patch('scripts.team_manage_resource.remove_team_repository') as mock_remove:
         mock_remove.return_value = True
-
-        # Test
-        sync_team_repos(mock_org, mock_team, desired_repos, "read", mock_logger)
-
-        # Verify
-        mock_remove.assert_called_once()
-        mock_logger.info.assert_any_call("Removing old-repo from test-team")
-
+        mock_remove.assert_called_once_with(
+            github_token='fake-token',
+            org_name='test-org',
+            team_slug='test-team',
+            repo_name='old-repo',
+            logger=mock_logger
+        )
 
 def test_sync_team_repos_update_permissions(mock_org, mock_team, mock_logger):
     # Setup
