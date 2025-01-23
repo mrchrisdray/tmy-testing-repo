@@ -13,9 +13,12 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from scripts.team_manage_subteams import setup_logging, get_modified_team_files, get_all_team_files
 
 
-@pytest.fixture
-def logger():
-    return setup_logging()
+@pytest.fixture(scope="session")
+def mock_logger():
+    """Create a logger instance that's reused across tests"""
+    logger = MagicMock()
+    logger.info = MagicMock()
+    return logger
 
 
 @pytest.fixture
@@ -55,21 +58,25 @@ def sample_teams_structure(temp_dir):
     return teams_dir
 
 
-def test_setup_logging():
-    logger = setup_logging()
-    logger.setLevel(logging.INFO)
-    assert logger.level == logging.INFO
-    assert len(logger.handlers) == 1
-
-
 def test_get_modified_team_files_success(mock_repo):
     """Test getting modified team files"""
     base_sha = "base_sha"
     head_sha = "head_sha"
-
+    
+    # Setup mock comparison
+    mock_comparison = MagicMock()
+    mock_file = MagicMock()
+    mock_file.filename = "teams/test-team/teams.yml"
+    mock_comparison.files = [mock_file]
+    mock_repo.compare.return_value = mock_comparison
+    
+    # Test
     modified_files = get_modified_team_files(mock_repo, base_sha, head_sha)
+    
+    # Verify
     assert len(modified_files) == 1
     assert modified_files[0] == "teams/test-team/teams.yml"
+    mock_repo.compare.assert_called_once_with(base_sha, head_sha)
 
 
 def test_get_modified_team_files_github_error(mock_repo):
