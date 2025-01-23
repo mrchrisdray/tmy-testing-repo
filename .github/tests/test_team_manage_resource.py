@@ -87,7 +87,6 @@ def test_sync_team_repos_remove_repo(mock_org, mock_team, mock_logger):
     mock_team.name = "test-team"
     mock_team.slug = "test-team"
     mock_org.login = "test-org"
-    desired_repos = []
     mock_repo = MagicMock()
     mock_repo.name = "old-repo"
     mock_team.get_repos.return_value = [mock_repo]
