@@ -62,17 +62,17 @@ def test_get_modified_team_files_success(mock_repo):
     """Test getting modified team files"""
     base_sha = "base_sha"
     head_sha = "head_sha"
-    
+
     # Setup mock comparison
     mock_comparison = MagicMock()
     mock_file = MagicMock()
     mock_file.filename = "teams/test-team/teams.yml"
     mock_comparison.files = [mock_file]
     mock_repo.compare.return_value = mock_comparison
-    
+
     # Test
     modified_files = get_modified_team_files(mock_repo, base_sha, head_sha)
-    
+
     # Verify
     assert len(modified_files) == 1
     assert modified_files[0] == "teams/test-team/teams.yml"
