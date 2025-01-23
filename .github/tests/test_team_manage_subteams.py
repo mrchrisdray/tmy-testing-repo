@@ -113,7 +113,7 @@ def test_load_team_config_invalid_yaml():
 def test_get_existing_subteams(mock_github):
     """Test retrieving existing sub-teams"""
     mock_org = mock_github
-    
+
     # Create mock parent team and sub-teams
     mock_parent_team = MagicMock()
     mock_org.get_team_by_slug.return_value = mock_parent_team
@@ -135,7 +135,7 @@ def test_get_existing_subteams(mock_github):
 def test_create_subteam(mock_github, mock_logger, sample_team_config):
     """Test creating a new sub-team"""
     mock_org = mock_github
-    
+
     # Create mock parent team
     mock_parent_team = MagicMock()
     mock_parent_team.id = 123
@@ -171,7 +171,7 @@ def test_delete_subteam(mock_github, mock_logger):
 def test_sync_subteams(mock_github, mock_logger, sample_team_config):
     """Test synchronizing sub-teams"""
     mock_org = mock_github
-    
+
     # Mock existing and desired sub-teams
     mock_parent_team = MagicMock()
     mock_parent_team.id = 123
