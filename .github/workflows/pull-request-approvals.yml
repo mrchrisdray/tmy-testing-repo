@@ -54,7 +54,6 @@ jobs:
           TEAM_NAME: ${{ github.event.inputs.team-name || 'Team-Test-Creation-A' }}
         with:
           script: |
-            const core = require('@actions/core');
             const fs = require('fs');
             const yaml = require('js-yaml');
 
