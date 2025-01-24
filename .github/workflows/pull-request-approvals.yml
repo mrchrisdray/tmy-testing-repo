@@ -62,7 +62,8 @@ jobs:
           TARGET_BRANCH: ${{ github.base_ref }}
           PR_NUMBER: ${{ inputs.pr_number || github.event.pull_request.number }}
         run: |
-          python .github/scripts/validate_pr_requirements.py
+          status=$(python .github/scripts/validate_pr_requirements.py)
+          echo "status=${status}" >> $GITHUB_OUTPUT
 
   block-merge:
     needs: validate-pr-requirements
