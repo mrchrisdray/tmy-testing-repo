@@ -58,6 +58,9 @@ jobs:
           GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
           GITHUB_ORGANIZATION: ${{ github.repository_owner }}
           GITHUB_REPOSITORY: ${{ github.repository }}
+          TEAM_NAME: ${{ inputs.team-name || 'Team-Test-Creation-A' }}
+          TARGET_BRANCH: ${{ github.base_ref }}
+          PR_NUMBER: ${{ inputs.pr_number || github.event.pull_request.number }}
         run: |
           python .github/scripts/validate_pr_requirements.py
 
@@ -92,6 +95,9 @@ jobs:
           GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
           GITHUB_ORGANIZATION: ${{ github.repository_owner }}
           GITHUB_REPOSITORY: ${{ github.repository }}
+          TEAM_NAME: ${{ inputs.team-name || 'Team-Test-Creation-A' }}
+          TARGET_BRANCH: ${{ github.base_ref }}
+          PR_NUMBER: ${{ inputs.pr_number || github.event.pull_request.number }}
         run: |
           python .github/scripts/validate_block_pr_merge.py
 
@@ -125,5 +131,8 @@ jobs:
           GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
           GITHUB_ORGANIZATION: ${{ github.repository_owner }}
           GITHUB_REPOSITORY: ${{ github.repository }}
+          TEAM_NAME: ${{ inputs.team-name || 'Team-Test-Creation-A' }}
+          TARGET_BRANCH: ${{ github.base_ref }}
+          PR_NUMBER: ${{ inputs.pr_number || github.event.pull_request.number }}
         run: |
           python .github/scripts/validate_pr_assign_reviewers.py 
