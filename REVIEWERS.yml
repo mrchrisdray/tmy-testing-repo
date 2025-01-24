@@ -10,7 +10,7 @@ pull_requests:
     
     # Configuration for the 'main' branch
     main:
-      # List of users to be assigned as reviewers
+      # List of teams to be assigned as reviewers
       review_teams:
         - '{{ team_name }}-reviewers'
         - '{{ team_name }}-project-owners'
@@ -19,9 +19,18 @@ pull_requests:
         - '{{ team_name }}-reviewers'
         - '{{ team_name }}-testers'
 
-      # List of users to be assigned as assignees
+      # List of teams to be assigned as assignees
       assignees:
         - '{{ team_name }}-developers'
+      # Required number of approvals to match number of required teams to approve
+      required_approvals: 5
+      # Required teams to approve before PR can be merged
+      required_teams:
+        - '{{ team_name }}-reviewers'
+        - '{{ team_name }}-project-owners'
+        - '{{ team_name }}-release-managers'
+        - '{{ team_name }}-reviewers'
+        - '{{ team_name }}-testers'
     
     # Configuration for the 'develop' branch
     develop:
@@ -29,9 +38,12 @@ pull_requests:
         - '{{ team_name }}-testers'
         - '{{ team_name }}-developers'
         - '{{ team_name }}-reviewers'
-
       assignees:
         - '{{ team_name }}-developers'
+      required_approvals: 2
+      required_teams:
+        - '{{ team_name }}-reviewers'
+        - '{{ team_name }}-testers'
     
     # Configuration for all branches starting with 'release/'
     "release/*":
@@ -39,9 +51,12 @@ pull_requests:
         - '{{ team_name }}-testers'
         - '{{ team_name }}-reviewers'
         - '{{ team_name }}-release-managers'
-
       assignees:
         - '{{ team_name }}-developers'
+      required_approvals: 2
+      required_teams:
+        - '{{ team_name }}-reviewers'
+        - '{{ team_name }}-release-managers'
     
     # Configuration for all branches starting with 'feature/'
     "feature/*":
@@ -52,7 +67,10 @@ pull_requests:
 
       assignees:
         - '{{ team_name }}-developers'
-
+      required_approvals: 1
+      required_teams:
+        - '{{ team_name }}-reviewers'
+        - '{{ team_name }}-testers'
       # Exclude specific branches from this configuration
       exclude:
         - "feature/ISSUE-999"
@@ -66,16 +84,22 @@ pull_requests:
 
       assignees:
         - '{{ team_name }}-developers'
-
+      required_approvals: 2
+      required_teams:
+        - '{{ team_name }}-reviewers'
+        - '{{ team_name }}-project-owners'
       exclude:
         - "bugfix/ISSUE-666"
 
     # Configuration for all branches starting with 'bugfix/'
     "hotfix/*":
       review_teams:
-        - '{{ team_name }}-release-managers
+        - '{{ team_name }}-release-managers'
         - '{{ team_name }}-project-owners'
-
+      required_approvals: 2
+      required_teams:
+        - '{{ team_name }}-reviewers'
+        - '{{ team_name }}-project-owners'
       assignees:
         - '{{ team_name }}-developers'
 
