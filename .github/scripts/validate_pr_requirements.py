@@ -1,7 +1,28 @@
 import os
-import yaml
 import sys
+import yaml
 from github import Github, GithubException
+
+def get_pr_number():
+    """Retrieve PR number from various possible sources."""
+    # Try environment variables first
+    pr_number_env = os.environ.get('PR_NUMBER')
+    if pr_number_env:
+        return int(pr_number_env)
+    
+    # Try GitHub Actions event context
+    github_event_path = os.environ.get('GITHUB_EVENT_PATH')
+    if github_event_path and os.path.exists(github_event_path):
+        import json
+        with open(github_event_path, mode='r', encoding='utf-8') as event_file:
+            event_data = json.load(event_file)
+            if 'pull_request' in event_data:
+                return event_data['pull_request']['number']
+            elif 'number' in event_data:
+                return event_data['number']
+    
+    # If no PR number found, raise an error
+    raise ValueError("Could not determine PR number. Ensure PR_NUMBER is set or running in a GitHub Actions context.")
 
 
 def replace_placeholders(text, team_name):
@@ -24,7 +45,7 @@ def expand_team_members(github_obj, org, teams):
 def validate_pr_requirements(config_path, pr_number, target_branch, team_name, github_token):
     """Validate pull request review requirements."""
     # Load configuration
-    with open(config_path, "r") as file:
+    with open(config_path, mode='r', encoding='utf-8') as file:
         config = yaml.safe_load(file)
 
     # Initialize GitHub client
@@ -36,8 +57,9 @@ def validate_pr_requirements(config_path, pr_number, target_branch, team_name, g
     branch_configs = config["pull_requests"]["branches"]
     branch_config = None
     for pattern, config in branch_configs.items():
-        if pattern.replace("*", ".*") in target_branch:
-            if not (config.get("exclude") and target_branch in config["exclude"]):
+        pattern_regex = pattern.replace('*', '.*')
+        if target_branch and (pattern_regex in target_branch or target_branch.startswith(pattern.rstrip('*'))):
+            if not (config.get('exclude') and target_branch in config['exclude']):
                 branch_config = config
                 break
 
@@ -66,23 +88,37 @@ def validate_pr_requirements(config_path, pr_number, target_branch, team_name, g
     required_approvals_count = sum(required_review_status)
     is_valid = required_approvals_count >= len(required_team_members)
 
+    # Print detailed validation info
+    print(f"Required team members: {required_team_members}")
+    print(f"Approvals count: {required_approvals_count}")
+    print(f"Total required members: {len(required_team_members)}")
+    print(f"Validation result: {is_valid}")
+
     return is_valid
 
 
 def main():
     # Get environment variables
-    config_path = os.environ.get("REVIEWERS_CONFIG_PATH", "REVIEWERS.yml")
-    pr_number = int(os.environ.get("PR_NUMBER", 0))
-    target_branch = os.environ.get("TARGET_BRANCH", "")
-    team_name = os.environ.get("TEAM_NAME", "team-test-creation-a")
-    github_token = os.environ.get("GITHUB_TOKEN")
-
-    # Validate PR requirements
-    result = validate_pr_requirements(config_path, pr_number, target_branch, team_name, github_token)
-
-    # Exit with appropriate status code
-    sys.exit(0 if result else 1)
+    config_path = os.environ.get('REVIEWERS_CONFIG_PATH', 'REVIEWERS.yml')
+    team_name = os.environ.get('TEAM_NAME')
+    github_token = os.environ.get('GITHUB_TOKEN')
+    target_branch = os.environ.get('TARGET_BRANCH', os.environ.get('GITHUB_BASE_REF', ''))
 
 
-if __name__ == "__main__":
+    try:
+        # Get PR number
+        pr_number = os.environ.get('PR_NUMBER', get_pr_number())
+
+
+        # Validate PR requirements
+        result = validate_pr_requirements(config_path, pr_number, target_branch, team_name, github_token)
+        
+        # Exit with appropriate status code
+        sys.exit(0 if result else 1)
+
+    except Exception as e:
+        print(f"Error: {e}")
+        sys.exit(1)
+
+if __name__ == '__main__':
     main()
