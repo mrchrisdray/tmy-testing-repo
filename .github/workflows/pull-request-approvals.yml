@@ -80,21 +80,55 @@ jobs:
             }
 
             // Expand team members
-            async function expandTeamMembers(teams) {
+            async function expandTeamMembers(teams, github, core) {
               const teamMembers = [];
-              for (const team of teams) {
-                const resolvedTeam = replacePlaceholders(team);
-                try {
-                  const { data: members } = await github.rest.teams.listMembersInOrg({
-                    org: context.repo.owner,
-                    team_slug: resolvedTeam
-                  });
-                  teamMembers.push(...members.map(member => member.login));
+                
+                for (const team of teams) {
+                  const resolvedTeam = replacePlaceholders(team);
+                  
+                  try {
+                    // First, try to list team members directly
+                    try {
+                      const { data: members } = await github.rest.teams.listMembersInOrg({
+                        org: context.repo.owner,
+                        team_slug: resolvedTeam
+                      });
+                      teamMembers.push(...members.map(member => member.login));
+                      continue;
+                    } catch (directListError) {
+                      // If direct listing fails, attempt alternative retrieval methods
+                      
+                      // Try to get team information first
+                      let teamInfo;
+                      try {
+                        teamInfo = await github.rest.teams.getByName({
+                          org: context.repo.owner,
+                          team _slug: resolvedTeam
+                      });
+                    } catch (teamLookupError) {
+                      core.warning(`Could not find team ${resolvedTeam}: ${teamLookupError.message}`);
+                      continue;
+                    }
+                    
+                    // If team found, attempt to list members using team ID
+                    if (teamInfo && teamInfo.data && teamInfo.data.id) {
+                      try {
+                        const { data: members } = await github.rest.teams.listMembersInTeam({
+                          team_id: teamInfo.data.id
+                        });
+                        teamMembers.push(...members.map(member => member.login));
+                      } catch (membersError) {
+                        core.warning(`Could not list members for team ${resolvedTeam}: ${membersError.message}`);
+                      }
+                    }
+                  }
                 } catch (error) {
-                  core.warning(`Could not fetch members for team ${resolvedTeam}: ${error.message}`);
+                  core.warning(`Unexpected error processing team ${resolvedTeam}: ${error.message}`);
                 }
               }
-              return teamMembers;
+            
+            // Remove duplicates and handle case where no members found
+            return [...new Set(teamMembers)];
             }
 
             // Process reviewers
@@ -205,21 +239,55 @@ jobs:
             }
 
             // Expand team members
-            async function expandTeamMembers(teams) {
+            async function expandTeamMembers(teams, github, core) {
               const teamMembers = [];
+              
               for (const team of teams) {
                 const resolvedTeam = replacePlaceholders(team);
+                
                 try {
-                  const { data: members } = await github.rest.teams.listMembersInOrg({
-                    org: context.repo.owner,
-                    team_slug: resolvedTeam
-                  });
-                  teamMembers.push(...members.map(member => member.login));
+                  // First, try to list team members directly
+                  try {
+                    const { data: members } = await github.rest.teams.listMembersInOrg({
+                      org: context.repo.owner,
+                      team_slug: resolvedTeam
+                    });
+                    teamMembers.push(...members.map(member => member.login));
+                    continue;
+                  } catch (directListError) {
+                    // If direct listing fails, attempt alternative retrieval methods
+                    
+                    // Try to get team information first
+                    let teamInfo;
+                    try {
+                      teamInfo = await github.rest.teams.getByName({
+                        org: context.repo.owner,
+                        team_slug: resolvedTeam
+                      });
+                    } catch (teamLookupError) {
+                      core.warning(`Could not find team ${resolvedTeam}: ${teamLookupError.message}`);
+                      continue;
+                    }
+                    
+                    // If team found, attempt to list members using team ID
+                    if (teamInfo && teamInfo.data && teamInfo.data.id) {
+                      try {
+                        const { data: members } = await github.rest.teams.listMembersInTeam({
+                          team_id: teamInfo.data.id
+                        });
+                        teamMembers.push(...members.map(member => member.login));
+                      } catch (membersError) {
+                        core.warning(`Could not list members for team ${resolvedTeam}: ${membersError.message}`);
+                      }
+                    }
+                  }
                 } catch (error) {
-                  console.warn(`Could not fetch members for team ${resolvedTeam}: ${error.message}`);
+                  core.warning(`Unexpected error processing team ${resolvedTeam}: ${error.message}`);
                 }
               }
-              return teamMembers;
+              
+              // Remove duplicates and handle case where no members found
+              return [...new Set(teamMembers)];
             }
 
             // Process reviewers and assignees
