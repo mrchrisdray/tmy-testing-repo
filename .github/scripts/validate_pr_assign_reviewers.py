@@ -23,7 +23,7 @@ def expand_team_members(github_obj, org, teams):
 def assign_reviewers_and_assignees(config_path, pr_number, target_branch, team_name, github_token):
     """Assign reviewers and assignees for a pull request."""
     # Load configuration
-    with open(config_path, mode='r', encoding='utf-8') as file:
+    with open(config_path, mode="r", encoding="utf-8") as file:
         config = yaml.safe_load(file)
 
     # Initialize GitHub client
