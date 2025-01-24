@@ -103,7 +103,7 @@ jobs:
                       try {
                         teamInfo = await github.rest.teams.getByName({
                           org: context.repo.owner,
-                          team _slug: resolvedTeam
+                          team_slug: resolvedTeam
                       });
                     } catch (teamLookupError) {
                       core.warning(`Could not find team ${resolvedTeam}: ${teamLookupError.message}`);
