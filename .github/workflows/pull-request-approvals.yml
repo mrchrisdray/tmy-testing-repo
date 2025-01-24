@@ -134,7 +134,7 @@ jobs:
 
             // Process reviewers
             const reviewTeams = (branchConfig.review_teams || []).map(replacePlaceholders);
-            const reviewers = await expandTeamMembers(reviewTeams);
+            const reviewers = await expandTeamMembers(reviewTeams, github, core);
 
             // Get PR reviews
             const { data: reviews } = await github.rest.pulls.listReviews({
@@ -240,7 +240,7 @@ jobs:
             }
 
             // Expand team members
-            async function expandTeamMembers(teams, github, core) {
+            async function expandTeamMembers(teams, github, logger) {
               const teamMembers = [];
               
               for (const team of teams) {
@@ -266,7 +266,7 @@ jobs:
                         team_slug: resolvedTeam
                       });
                     } catch (teamLookupError) {
-                      core.warning(`Could not find team ${resolvedTeam}: ${teamLookupError.message}`);
+                      logger.warning(`Could not find team ${resolvedTeam}: ${teamLookupError.message}`);
                       continue;
                     }
                     
@@ -278,12 +278,12 @@ jobs:
                         });
                         teamMembers.push(...members.map(member => member.login));
                       } catch (membersError) {
-                        core.warning(`Could not list members for team ${resolvedTeam}: ${membersError.message}`);
+                        logger.warning(`Could not list members for team ${resolvedTeam}: ${membersError.message}`);
                       }
                     }
                   }
                 } catch (error) {
-                  core.warning(`Unexpected error processing team ${resolvedTeam}: ${error.message}`);
+                  logger.warning(`Unexpected error processing team ${resolvedTeam}: ${error.message}`);
                 }
               }
               
@@ -295,7 +295,7 @@ jobs:
             const reviewTeams = (branchConfig.review_teams || []).map(replacePlaceholders);
             const assigneeTeams = (branchConfig.assignees || []).map(replacePlaceholders);
 
-            const reviewers = await expandTeamMembers(reviewTeams);
+            const reviewers = await expandTeamMembers(reviewTeams, github, core);
             const assignees = await expandTeamMembers(assigneeTeams);
 
             // Assign reviewers
