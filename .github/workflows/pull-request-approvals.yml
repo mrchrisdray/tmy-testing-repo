@@ -82,28 +82,28 @@ jobs:
             // Expand team members
             async function expandTeamMembers(teams, github, core) {
               const teamMembers = [];
+              
+              for (const team of teams) {
+                const resolvedTeam = replacePlaceholders(team);
                 
-                for (const team of teams) {
-                  const resolvedTeam = replacePlaceholders(team);
-                  
+                try {
+                  // First, try to list team members directly
                   try {
-                    // First, try to list team members directly
+                    const { data: members } = await github.rest.teams.listMembersInOrg({
+                      org: context.repo.owner,
+                      team_slug: resolvedTeam
+                    });
+                    teamMembers.push(...members.map(member => member.login));
+                    continue;
+                  } catch (directListError) {
+                    // If direct listing fails, attempt alternative retrieval methods
+                    
+                    // Try to get team information first
+                    let teamInfo;
                     try {
-                      const { data: members } = await github.rest.teams.listMembersInOrg({
+                      teamInfo = await github.rest.teams.getByName({
                         org: context.repo.owner,
                         team_slug: resolvedTeam
-                      });
-                      teamMembers.push(...members.map(member => member.login));
-                      continue;
-                    } catch (directListError) {
-                      // If direct listing fails, attempt alternative retrieval methods
-                      
-                      // Try to get team information first
-                      let teamInfo;
-                      try {
-                        teamInfo = await github.rest.teams.getByName({
-                          org: context.repo.owner,
-                          team_slug: resolvedTeam
                       });
                     } catch (teamLookupError) {
                       core.warning(`Could not find team ${resolvedTeam}: ${teamLookupError.message}`);
@@ -126,7 +126,7 @@ jobs:
                   core.warning(`Unexpected error processing team ${resolvedTeam}: ${error.message}`);
                 }
               }
-            
+              
               // Remove duplicates and handle case where no members found
               return [...new Set(teamMembers)];
             }
