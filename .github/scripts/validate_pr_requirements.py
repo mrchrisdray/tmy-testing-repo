@@ -64,7 +64,7 @@ def validate_pr_requirements(config_path, pr_number, target_branch, team_name, g
             if not (config.get("exclude") and target_branch in config["exclude"]):
                 branch_config = config
                 break
-
+    print(f"Branch Config: {branch_config}")            
     if not branch_config:
         print(f"No configuration found for branch {target_branch}")
         return False
@@ -105,7 +105,10 @@ def main():
     team_name = os.environ.get("TEAM_NAME")
     github_token = os.environ.get("GITHUB_TOKEN")
     target_branch = os.environ.get("TARGET_BRANCH", os.environ.get("GITHUB_BASE_REF", ""))
-
+    print(f"PR Number: {pr_number}")
+    print(f"Target Branch: {target_branch}")
+    print(f"Team Name: {team_name}")
+    print (f"Config Path: {config_path}")
     try:
         # Get PR number
         pr_number = os.environ.get("PR_NUMBER")
