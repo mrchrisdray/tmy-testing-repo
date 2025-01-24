@@ -131,6 +131,8 @@ jobs:
     needs: validate-pr-requirements
     if: needs.validate-pr-requirements.outputs.status == 'false'
     runs-on: ubuntu-latest
+    environment: 
+      name: cloud-platform
     steps:
       - uses: actions/create-github-app-token@v1
         id: app-token
@@ -154,6 +156,8 @@ jobs:
   assign-reviewers-and-assignees:
     needs: validate-pr-requirements
     runs-on: ubuntu-latest
+    environment: 
+      name: cloud-platform
     steps:
       - uses: actions/create-github-app-token@v1
         id: app-token
