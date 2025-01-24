@@ -101,7 +101,7 @@ def validate_pr_requirements(config_path, pr_number, target_branch, team_name, g
 
 def main():
     # Get environment variables
-    config_path = os.environ.get("REVIEWERS_CONFIG_PATH", "REVIEWERS.yml")
+    config_path = os.environ.get("REVIEWERS_CONFIG_PATH", "./REVIEWERS.yml")
     team_name = os.environ.get("TEAM_NAME")
     github_token = os.environ.get("GITHUB_TOKEN")
     target_branch = os.environ.get("TARGET_BRANCH", os.environ.get("GITHUB_BASE_REF", ""))
