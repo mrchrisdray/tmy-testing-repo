@@ -3,8 +3,9 @@ run-name: ${{ inputs.pr_number != '' && format('Test Assign Reviewers for PR \#{
 
 on: 
   pull_request:
-    branches:
-      - '**'
+    types: [opened, reopened, synchronize, ready_for_review]
+  pull_request_review:
+    types: [submitted]
   workflow_dispatch:
     inputs:
       yaml_filename:
@@ -53,6 +54,7 @@ jobs:
           TEAM_NAME: ${{ github.event.inputs.team-name || 'Team-Test-Creation-A' }}
         with:
           script: |
+            const core = require('@actions/core');
             const fs = require('fs');
             const yaml = require('js-yaml');
 
