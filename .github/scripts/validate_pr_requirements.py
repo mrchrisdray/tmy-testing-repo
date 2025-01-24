@@ -114,7 +114,7 @@ def main():
         pr_number = os.environ.get("PR_NUMBER")
         if not pr_number:
             pr_number = get_pr_number()
-        
+
         print(f"PR Number: {pr_number}")
 
         # Validate PR requirements
