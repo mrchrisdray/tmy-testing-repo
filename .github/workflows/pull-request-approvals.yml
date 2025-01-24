@@ -3,9 +3,8 @@ run-name: ${{ inputs.pr_number != '' && format('Test Assign Reviewers for PR \#{
 
 on: 
   pull_request:
-    types: [opened, reopened, synchronize, ready_for_review]
-  pull_request_review:
-    types: [submitted]
+    branches:
+      - '**'
   workflow_dispatch:
     inputs:
       yaml_filename:
@@ -51,7 +50,7 @@ jobs:
         uses: actions/github-script@v7
         env:
           GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
-          TEAM_NAME: ${{ github.event.inputs.team-name || 'Team-Test-Creation-A' }}
+          TEAM_NAME: ${{ github.event.inputs.team-name || 'team-test-creation-a' }}
         with:
           script: |
             const fs = require('fs');
@@ -81,60 +80,26 @@ jobs:
             }
 
             // Expand team members
-            async function expandTeamMembers(teams, github, logger) {
+            async function expandTeamMembers(teams) {
               const teamMembers = [];
-              
               for (const team of teams) {
                 const resolvedTeam = replacePlaceholders(team);
-                
                 try {
-                  // First, try to list team members directly
-                  try {
-                    const { data: members } = await github.rest.teams.listMembersInOrg({
-                      org: context.repo.owner,
-                      team_slug: resolvedTeam
-                    });
-                    teamMembers.push(...members.map(member => member.login));
-                    continue;
-                  } catch (directListError) {
-                    // If direct listing fails, attempt alternative retrieval methods
-                    
-                    // Try to get team information first
-                    let teamInfo;
-                    try {
-                      teamInfo = await github.rest.teams.getByName({
-                        org: context.repo.owner,
-                        team_slug: resolvedTeam
-                      });
-                    } catch (teamLookupError) {
-                      logger.warning(`Could not find team ${resolvedTeam}: ${teamLookupError.message}`);
-                      continue;
-                    }
-                    
-                    // If team found, attempt to list members using team ID
-                    if (teamInfo && teamInfo.data && teamInfo.data.id) {
-                      try {
-                        const { data: members } = await github.rest.teams.listMembersInTeam({
-                          team_id: teamInfo.data.id
-                        });
-                        teamMembers.push(...members.map(member => member.login));
-                      } catch (membersError) {
-                        logger.warning(`Could not list members for team ${resolvedTeam}: ${membersError.message}`);
-                      }
-                    }
-                  }
+                  const { data: members } = await github.rest.teams.listMembersInOrg({
+                    org: context.repo.owner,
+                    team_slug: resolvedTeam
+                  });
+                  teamMembers.push(...members.map(member => member.login));
                 } catch (error) {
-                  logger.warning(`Unexpected error processing team ${resolvedTeam}: ${error.message}`);
+                  core.warning(`Could not fetch members for team ${resolvedTeam}: ${error.message}`);
                 }
               }
-              
-              // Remove duplicates and handle case where no members found
-              return [...new Set(teamMembers)];
+              return teamMembers;
             }
 
             // Process reviewers
             const reviewTeams = (branchConfig.review_teams || []).map(replacePlaceholders);
-            const reviewers = await expandTeamMembers(reviewTeams, github, core);
+            const reviewers = await expandTeamMembers(reviewTeams);
 
             // Get PR reviews
             const { data: reviews } = await github.rest.pulls.listReviews({
@@ -210,7 +175,7 @@ jobs:
         uses: actions/github-script@v7
         env:
           GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
-          TEAM_NAME: ${{ github.event.inputs.team-name || 'Team-Test-Creation-A' }}
+          TEAM_NAME: ${{ github.event.inputs.team-name || 'team-test-creation-a' }}
         with:
           script: |
             const fs = require('fs');
@@ -240,62 +205,28 @@ jobs:
             }
 
             // Expand team members
-            async function expandTeamMembers(teams, github, logger) {
+            async function expandTeamMembers(teams) {
               const teamMembers = [];
-              
               for (const team of teams) {
                 const resolvedTeam = replacePlaceholders(team);
-                
                 try {
-                  // First, try to list team members directly
-                  try {
-                    const { data: members } = await github.rest.teams.listMembersInOrg({
-                      org: context.repo.owner,
-                      team_slug: resolvedTeam
-                    });
-                    teamMembers.push(...members.map(member => member.login));
-                    continue;
-                  } catch (directListError) {
-                    // If direct listing fails, attempt alternative retrieval methods
-                    
-                    // Try to get team information first
-                    let teamInfo;
-                    try {
-                      teamInfo = await github.rest.teams.getByName({
-                        org: context.repo.owner,
-                        team_slug: resolvedTeam
-                      });
-                    } catch (teamLookupError) {
-                      logger.warning(`Could not find team ${resolvedTeam}: ${teamLookupError.message}`);
-                      continue;
-                    }
-                    
-                    // If team found, attempt to list members using team ID
-                    if (teamInfo && teamInfo.data && teamInfo.data.id) {
-                      try {
-                        const { data: members } = await github.rest.teams.listMembersInTeam({
-                          team_id: teamInfo.data.id
-                        });
-                        teamMembers.push(...members.map(member => member.login));
-                      } catch (membersError) {
-                        logger.warning(`Could not list members for team ${resolvedTeam}: ${membersError.message}`);
-                      }
-                    }
-                  }
+                  const { data: members } = await github.rest.teams.listMembersInOrg({
+                    org: context.repo.owner,
+                    team_slug: resolvedTeam
+                  });
+                  teamMembers.push(...members.map(member => member.login));
                 } catch (error) {
-                  logger.warning(`Unexpected error processing team ${resolvedTeam}: ${error.message}`);
+                  console.warn(`Could not fetch members for team ${resolvedTeam}: ${error.message}`);
                 }
               }
-              
-              // Remove duplicates and handle case where no members found
-              return [...new Set(teamMembers)];
+              return teamMembers;
             }
 
             // Process reviewers and assignees
             const reviewTeams = (branchConfig.review_teams || []).map(replacePlaceholders);
             const assigneeTeams = (branchConfig.assignees || []).map(replacePlaceholders);
 
-            const reviewers = await expandTeamMembers(reviewTeams, github, core);
+            const reviewers = await expandTeamMembers(reviewTeams);
             const assignees = await expandTeamMembers(assigneeTeams);
 
             // Assign reviewers
