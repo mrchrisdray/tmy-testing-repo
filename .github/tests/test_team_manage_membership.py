@@ -224,11 +224,29 @@ def test_sync_team_memberships_parent_team_not_found(mock_github, mock_logger, s
 
 
 # Error handling and edge case tests
-def test_sync_team_members_github_exception(mock_github, mock_team, mock_logger):
-    mock_github.get_user.side_effect = GithubException(404, "User not found")
+def test_sync_team_members_github_exception(mock_github, mock_team, mock_logger, caplog):
+    # Simulate GitHub user lookup failure
+    def side_effect(username):
+        if username == "non_existent_user":
+            raise GithubException(404, "User not found")
+        return MagicMock()  # Return a mock user for valid usernames
 
-    with pytest.raises(GithubException):
-        sync_team_members(mock_github, mock_team, "test-team", ["non_existent_user"], mock_logger)
+    mock_github.get_user.side_effect = side_effect
+    mock_team.get_members.return_value = []
+
+    # Capture log messages
+    caplog.set_level(logging.ERROR)
+
+    # Test adding a non-existent user
+    sync_team_members(mock_github, mock_team, "test-team", ["non_existent_user"], mock_logger)
+
+    # Assert that an error was logged
+    assert any("Failed to add non_existent_user to test-team" in record.message 
+               for record in caplog.records)
+    
+    # Verify no membership operations were performed
+    mock_team.add_membership.assert_not_called()
+    mock_team.remove_membership.assert_not_called()
 
 
 # Cleanup fixture to ensure no hanging connections
