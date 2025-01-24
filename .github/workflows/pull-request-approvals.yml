@@ -30,7 +30,16 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       status: ${{ steps.check-reviews.outputs.status }}
+    environment: 
+      name: cloud-platform
     steps:
+      - uses: actions/create-github-app-token@v1
+        id: app-token
+        with:
+          app-id: ${{ vars.APP_ID }}
+          private-key: ${{ secrets.APP_KEY }}
+          owner: ${{ github.repository_owner }}
+
       - uses: actions/checkout@v4
 
       - name: Install js-yaml
@@ -40,7 +49,7 @@ jobs:
         id: check-reviews
         uses: actions/github-script@v7
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
           TEAM_NAME: ${{ inputs.team_name }}
         with:
           script: |
@@ -126,7 +135,7 @@ jobs:
       - name: Block Merge
         uses: actions/github-script@v7
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          github-token: ${{ steps.app-token.outputs.token }}
           script: |
             github.rest.pulls.update({
               owner: context.repo.owner,
@@ -139,12 +148,22 @@ jobs:
     needs: validate-pr-requirements
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/create-github-app-token@v1
+        id: app-token
+        with:
+          app-id: ${{ vars.APP_ID }}
+          private-key: ${{ secrets.APP_KEY }}
+          owner: ${{ github.repository_owner }}
+
       - uses: actions/checkout@v4
+      
+      - name: Install js-yaml
+        run: npm install js-yaml
 
       - name: Assign Reviewers and Assignees
         uses: actions/github-script@v7
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
           TEAM_NAME: ${{ inputs.team_name }}
         with:
           script: |
