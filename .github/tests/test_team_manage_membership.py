@@ -4,7 +4,7 @@ from unittest.mock import patch, MagicMock
 import logging
 import yaml
 import pytest
-from github import GithubException 
+from github import GithubException
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 # Import the functions to test
