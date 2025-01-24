@@ -1,5 +1,6 @@
 import os
 import sys
+import json
 import yaml
 from github import Github, GithubException
 
@@ -14,13 +15,12 @@ def get_pr_number():
     # Try GitHub Actions event context
     github_event_path = os.environ.get("GITHUB_EVENT_PATH")
     if github_event_path and os.path.exists(github_event_path):
-        import json
 
         with open(github_event_path, mode="r", encoding="utf-8") as event_file:
             event_data = json.load(event_file)
             if "pull_request" in event_data:
                 return event_data["pull_request"]["number"]
-            elif "number" in event_data:
+            if "number" in event_data:
                 return event_data["number"]
 
     # If no PR number found, raise an error
@@ -71,13 +71,13 @@ def validate_pr_requirements(config_path, pr_number, target_branch, team_name, g
 
     # Process reviewers
     review_teams = [replace_placeholders(team, team_name) for team in branch_config.get("review_teams", [])]
-    reviewers = expand_team_members(github_obj, repo.organization.login, review_teams)
+    expand_team_members(github_obj, repo.organization.login, review_teams)
 
     # Get PR reviews
     reviews = pull_request.get_reviews()
 
     # Validate required reviews
-    required_approvals = branch_config.get("required_approvals", 0)
+    branch_config.get("required_approvals", 0)
     required_teams = [replace_placeholders(team, team_name) for team in branch_config.get("required_teams", [])]
     required_team_members = expand_team_members(github_obj, repo.organization.login, required_teams)
 
@@ -108,7 +108,9 @@ def main():
 
     try:
         # Get PR number
-        pr_number = os.environ.get("PR_NUMBER", get_pr_number())
+        pr_number = os.environ.get("PR_NUMBER")
+        if not pr_number:
+            pr_number = get_pr_number()
 
         # Validate PR requirements
         result = validate_pr_requirements(config_path, pr_number, target_branch, team_name, github_token)
