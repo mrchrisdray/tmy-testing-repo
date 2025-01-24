@@ -4,8 +4,7 @@ from unittest.mock import patch, MagicMock
 import logging
 import yaml
 import pytest
-from github import GithubException
-import timeout_decorator
+from github import GithubException 
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 # Import the functions to test
@@ -21,12 +20,6 @@ from scripts.team_manage_membership import (
 
 # Increased timeout for complex tests
 TEST_TIMEOUT = 30
-
-
-@pytest.fixture(scope="session", autouse=True)
-def setup_timeout():
-    """Setup global timeout for all tests with a longer timeout"""
-    timeout_decorator.timeout(TEST_TIMEOUT)(lambda: None)()
 
 
 @pytest.fixture(scope="session")
