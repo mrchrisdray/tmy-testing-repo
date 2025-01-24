@@ -105,7 +105,7 @@ def main():
     team_name = os.environ.get("TEAM_NAME")
     github_token = os.environ.get("GITHUB_TOKEN")
     target_branch = os.environ.get("TARGET_BRANCH", os.environ.get("GITHUB_BASE_REF", ""))
-    print(f"PR Number: {pr_number}")
+
     print(f"Target Branch: {target_branch}")
     print(f"Team Name: {team_name}")
     print(f"Config Path: {config_path}")
@@ -114,6 +114,8 @@ def main():
         pr_number = os.environ.get("PR_NUMBER")
         if not pr_number:
             pr_number = get_pr_number()
+        
+        print(f"PR Number: {pr_number}")
 
         # Validate PR requirements
         result = validate_pr_requirements(config_path, pr_number, target_branch, team_name, github_token)
