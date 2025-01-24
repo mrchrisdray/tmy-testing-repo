@@ -127,8 +127,8 @@ jobs:
                 }
               }
             
-            // Remove duplicates and handle case where no members found
-            return [...new Set(teamMembers)];
+              // Remove duplicates and handle case where no members found
+              return [...new Set(teamMembers)];
             }
 
             // Process reviewers
