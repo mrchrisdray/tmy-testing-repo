@@ -241,9 +241,8 @@ def test_sync_team_members_github_exception(mock_github, mock_team, mock_logger,
     sync_team_members(mock_github, mock_team, "test-team", ["non_existent_user"], mock_logger)
 
     # Assert that an error was logged
-    assert any("Failed to add non_existent_user to test-team" in record.message 
-               for record in caplog.records)
-    
+    assert any("Failed to add non_existent_user to test-team" in record.message for record in caplog.records)
+
     # Verify no membership operations were performed
     mock_team.add_membership.assert_not_called()
     mock_team.remove_membership.assert_not_called()
