@@ -102,7 +102,7 @@ def test_get_all_team_files(tmp_path):
 
 def test_load_team_config_valid(tmp_path, sample_team_config):
     test_file = tmp_path / "teams.yml"
-    with open(test_file, "w") as f:
+    with open(test_file, mode="w", encoding='utf-8') as f:
         yaml.dump(sample_team_config, f)
 
     config = load_team_config(str(test_file))
@@ -113,7 +113,7 @@ def test_load_team_config_valid(tmp_path, sample_team_config):
 
 def test_load_team_config_invalid_yaml(tmp_path):
     test_file = tmp_path / "invalid.yml"
-    with open(test_file, "w") as f:
+    with open(test_file, mode="w", encoding='utf-8') as f:
         f.write("invalid: yaml: content: - [")
 
     with pytest.raises(ValueError) as exc_info:
