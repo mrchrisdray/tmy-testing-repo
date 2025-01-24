@@ -1,0 +1,177 @@
+# REVIEWERS.yml
+# This file configures reviewers and assignees for different review scenarios.
+
+# Pull Requests Configuration
+pull_requests:
+  # Branch-specific configurations
+  branches:
+    # Each key under 'branches' represents a branch pattern
+    # You can use exact branch names or patterns with wildcards (*)
+    
+    # Configuration for the 'main' branch
+    main:
+      # List of users to be assigned as reviewers
+      review_teams:
+        - '{{ team_name }}-reviewers'
+        - '{{ team_name }}-project-owners'
+        - '{{ team_name }}-release-managers'
+        - '{{ team_name }}-security'
+        - '{{ team_name }}-reviewers'
+        - '{{ team_name }}-testers'
+
+      # List of users to be assigned as assignees
+      assignees:
+        - '{{ team_name }}-developers'
+    
+    # Configuration for the 'develop' branch
+    develop:
+      review_teams:
+        - '{{ team_name }}-testers'
+        - '{{ team_name }}-developers'
+        - '{{ team_name }}-reviewers'
+
+      assignees:
+        - '{{ team_name }}-developers'
+    
+    # Configuration for all branches starting with 'release/'
+    "release/*":
+      review_teams:
+        - '{{ team_name }}-testers'
+        - '{{ team_name }}-reviewers'
+        - '{{ team_name }}-release-managers'
+
+      assignees:
+        - '{{ team_name }}-developers'
+    
+    # Configuration for all branches starting with 'feature/'
+    "feature/*":
+      review_teams:
+        - '{{ team_name }}-testers'
+        - '{{ team_name }}-developers'
+        - '{{ team_name }}-reviewers'
+
+      assignees:
+        - '{{ team_name }}-developers'
+
+      # Exclude specific branches from this configuration
+      exclude:
+        - "feature/ISSUE-999"
+        - "feature/do-not-assign"
+    
+    # Configuration for all branches starting with 'bugfix/'
+    "bugfix/*":
+      review_teams:
+        - '{{ team_name }}-release-managers'
+        - '{{ team_name }}-project-owners'
+
+      assignees:
+        - '{{ team_name }}-developers'
+
+      exclude:
+        - "bugfix/ISSUE-666"
+
+    # Configuration for all branches starting with 'bugfix/'
+    "hotfix/*":
+      review_teams:
+        - '{{ team_name }}-release-managers
+        - '{{ team_name }}-project-owners'
+
+      assignees:
+        - '{{ team_name }}-developers'
+
+# Available options for each branch configuration:
+# - review_users: List of GitHub usernames to be assigned as reviewers
+# - review_teams: List of GitHub team names to be assigned as reviewers (not used in current config)
+# - assignees: List of GitHub usernames to be assigned as assignees
+# - exclude: List of specific branch names to be excluded from the configuration
+
+# Notes:
+# 1. The PR creator will automatically be filtered out from the reviewers list.
+# 2. Branch patterns support wildcards (*) for matching multiple branches.
+# 3. More specific branch patterns take precedence over general ones.
+# 4. The 'exclude' option allows you to exempt specific branches from a general pattern.
+
+# Full Usage Examples:
+
+# Example 1: Basic configuration for a specific branch
+# pull_requests:
+#   branches:
+#     main:
+#       review_users:
+#         - user1
+#         - user2
+#       assignees:
+#         - lead_developer
+
+# Example 2: Using wildcards and exclusions
+# pull_requests:
+#   branches:
+#     "feature/*":
+#       review_users:
+#         - dev1
+#         - dev2
+#       review_teams:
+#         - frontend-team
+#       assignees:
+#         - project_manager
+#       exclude:
+#         - "feature/do-not-review"
+
+# Example 3: Different configurations for multiple branch patterns
+# pull_requests:
+#   branches:
+#     main:
+#       review_users:
+#         - senior_dev1
+#         - senior_dev2
+#     develop:
+#       review_users:
+#         - dev1
+#         - dev2
+#     "release/*":
+#       review_users:
+#         - qa1
+#         - qa2
+#       assignees:
+#         - release_manager
+
+# Example 4: Using review teams
+# pull_requests:
+#   branches:
+#     "bugfix/*":
+#       review_teams:
+#         - bug-hunters
+#       assignees:
+#         - qa_lead
+
+# Example 5: Complex configuration with multiple options
+# pull_requests:
+#   branches:
+#     main:
+#       review_users:
+#         - cto
+#         - tech_lead
+#       review_teams:
+#         - core-dev-team
+#       assignees:
+#         - project_manager
+#     "feature/*":
+#       review_users:
+#         - senior_dev1
+#         - senior_dev2
+#       review_teams:
+#         - feature-review-team
+#       assignees:
+#         - product_owner
+#       exclude:
+#         - "feature/experimental"
+#     "hotfix/*":
+#       review_users:
+#         - on_call_dev
+#       review_teams:
+#         - emergency-response-team
+#       assignees:
+#         - ops_manager
+
+# These examples demonstrate various ways to configure the REVIEWERS.yml file
+# for different scenarios and team structures. Adjust them as needed for your project.
