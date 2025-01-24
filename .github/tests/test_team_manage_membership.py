@@ -102,9 +102,9 @@ def test_get_all_team_files(tmp_path):
 
 def test_load_team_config_valid(tmp_path, sample_team_config):
     test_file = tmp_path / "teams.yml"
-    with open(test_file, 'w') as f:
+    with open(test_file, "w") as f:
         yaml.dump(sample_team_config, f)
-    
+
     config = load_team_config(str(test_file))
     assert config == sample_team_config
     assert "teams" in config
@@ -113,9 +113,9 @@ def test_load_team_config_valid(tmp_path, sample_team_config):
 
 def test_load_team_config_invalid_yaml(tmp_path):
     test_file = tmp_path / "invalid.yml"
-    with open(test_file, 'w') as f:
+    with open(test_file, "w") as f:
         f.write("invalid: yaml: content: - [")
-    
+
     with pytest.raises(ValueError) as exc_info:
         load_team_config(str(test_file))
     assert "Failed to parse YAML" in str(exc_info.value)
@@ -123,7 +123,7 @@ def test_load_team_config_invalid_yaml(tmp_path):
 
 def test_load_team_config_file_not_found(tmp_path):
     non_existent_file = tmp_path / "non_existent.yml"
-    
+
     with pytest.raises(FileNotFoundError):
         load_team_config(str(non_existent_file))
 
@@ -139,7 +139,9 @@ def test_get_modified_team_files():
     mock_comparison.files = [mock_file1, mock_file2]
     mock_repo.compare.return_value = mock_comparison
 
-    with patch("scripts.team_manage_membership.get_all_team_files", return_value=["team1/teams.yml", "team2/teams.yml"]):
+    with patch(
+        "scripts.team_manage_membership.get_all_team_files", return_value=["team1/teams.yml", "team2/teams.yml"]
+    ):
         files = get_modified_team_files(mock_repo, "base-sha", "head-sha")
         assert len(files) == 2
         assert "team1/teams.yml" in files
@@ -224,7 +226,7 @@ def test_sync_team_memberships_parent_team_not_found(mock_github, mock_logger, s
 # Error handling and edge case tests
 def test_sync_team_members_github_exception(mock_github, mock_team, mock_logger):
     mock_github.get_user.side_effect = GithubException(404, "User not found")
-    
+
     with pytest.raises(GithubException):
         sync_team_members(mock_github, mock_team, "test-team", ["non_existent_user"], mock_logger)
 
