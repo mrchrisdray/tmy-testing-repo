@@ -42,90 +42,24 @@ jobs:
 
       - uses: actions/checkout@v4
 
-      - name: Install js-yaml
-        run: npm install js-yaml
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+  
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install PyYAML PyGithub gitpython
 
       - name: Read and Validate PR Requirements
-        id: check-reviews
-        uses: actions/github-script@v7
+        id: validate-pr-requirements
         env:
           GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
-          TEAM_NAME: ${{ github.event.inputs.team-name || 'team-test-creation-a' }}
-        with:
-          script: |
-            const fs = require('fs');
-            const yaml = require('js-yaml');
-
-            // Load REVIEWERS.yml
-            const config = yaml.load(fs.readFileSync('REVIEWERS.yml', 'utf8'));
-            const prNumber = context.issue.number;
-            const targetBranch = context.payload.pull_request.base.ref;
-            const teamName = process.env.TEAM_NAME;
-
-            // Replace team name placeholders in the configuration
-            const replacePlaceholders = (str) => 
-              str.replace(/\{\{\s*team_name\s*\}\}/g, teamName);
-
-            // Find branch-specific configuration
-            const branchConfig = Object.entries(config.pull_requests.branches)
-              .find(([pattern, config]) => {
-                const regex = new RegExp('^' + pattern.replace('*', '.*') + '$');
-                return regex.test(targetBranch) && 
-                       !(config.exclude && config.exclude.includes(targetBranch));
-              })?.[1];
-
-            if (!branchConfig) {
-              core.setFailed(`No configuration found for branch ${targetBranch}`);
-              return;
-            }
-
-            // Expand team members
-            async function expandTeamMembers(teams) {
-              const teamMembers = [];
-              for (const team of teams) {
-                const resolvedTeam = replacePlaceholders(team);
-                try {
-                  const { data: members } = await github.rest.teams.listMembersInOrg({
-                    org: context.repo.owner,
-                    team_slug: resolvedTeam
-                  });
-                  teamMembers.push(...members.map(member => member.login));
-                } catch (error) {
-                  core.warning(`Could not fetch members for team ${resolvedTeam}: ${error.message}`);
-                }
-              }
-              return teamMembers;
-            }
-
-            // Process reviewers
-            const reviewTeams = (branchConfig.review_teams || []).map(replacePlaceholders);
-            const reviewers = await expandTeamMembers(reviewTeams);
-
-            // Get PR reviews
-            const { data: reviews } = await github.rest.pulls.listReviews({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              pull_number: prNumber
-            });
-
-            // Validate required reviews
-            const requiredApprovals = branchConfig.required_approvals || 0;
-            const requiredTeams = (branchConfig.required_teams || []).map(replacePlaceholders);
-
-            const requiredTeamMembers = await expandTeamMembers(requiredTeams);
-            const requiredReviewStatus = requiredTeamMembers.map(reviewer => 
-              reviews.some(r => r.user.login === reviewer && r.state === 'APPROVED')
-            );
-
-            const requiredApprovalsCount = requiredReviewStatus.filter(Boolean).length;
-            const isValid = requiredApprovalsCount >= requiredTeamMembers.length;
-
-            core.setOutput('status', isValid);
-
-            if (!isValid) {
-              core.setFailed(`PR does not meet review requirements. 
-                Required team reviewers: ${requiredTeamMembers.length} (${requiredApprovalsCount} approved)`);
-            }
+          GITHUB_ORGANIZATION: ${{ github.repository_owner }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          python .github/scripts/validate_pr_requirements.py
 
   block-merge:
     needs: validate-pr-requirements
@@ -141,17 +75,25 @@ jobs:
           private-key: ${{ secrets.APP_KEY }}
           owner: ${{ github.repository_owner }}
 
-      - name: Block Merge
-        uses: actions/github-script@v7
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
-          github-token: ${{ steps.app-token.outputs.token }}
-          script: |
-            github.rest.pulls.update({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              pull_number: context.issue.number,
-              mergeable_state: 'blocked'
-            });
+          python-version: '3.11'
+    
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install PyYAML PyGithub gitpython
+     
+      - name: Block Merge
+        env:
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
+          GITHUB_ORGANIZATION: ${{ github.repository_owner }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          python .github/scripts/validate_block_pr_merge.py
 
   assign-reviewers-and-assignees:
     needs: validate-pr-requirements
@@ -168,85 +110,20 @@ jobs:
 
       - uses: actions/checkout@v4
       
-      - name: Install js-yaml
-        run: npm install js-yaml
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+  
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install PyYAML PyGithub gitpython
 
       - name: Assign Reviewers and Assignees
-        uses: actions/github-script@v7
         env:
           GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
-          TEAM_NAME: ${{ github.event.inputs.team-name || 'team-test-creation-a' }}
-        with:
-          script: |
-            const fs = require('fs');
-            const yaml = require('js-yaml');
-
-            // Load REVIEWERS.yml
-            const config = yaml.load(fs.readFileSync('REVIEWERS.yml', 'utf8'));
-            const targetBranch = context.payload.pull_request.base.ref;
-            const prNumber = context.issue.number;
-            const teamName = process.env.TEAM_NAME;
-
-            // Replace team name placeholders in the configuration
-            const replacePlaceholders = (str) => 
-              str.replace(/\{\{\s*team_name\s*\}\}/g, teamName);
-
-            // Find branch-specific configuration
-            const branchConfig = Object.entries(config.pull_requests.branches)
-              .find(([pattern, config]) => {
-                const regex = new RegExp('^' + pattern.replace('*', '.*') + '$');
-                return regex.test(targetBranch) && 
-                       !(config.exclude && config.exclude.includes(targetBranch));
-              })?.[1];
-
-            if (!branchConfig) {
-              console.log(`No configuration found for branch ${targetBranch}`);
-              return;
-            }
-
-            // Expand team members
-            async function expandTeamMembers(teams) {
-              const teamMembers = [];
-              for (const team of teams) {
-                const resolvedTeam = replacePlaceholders(team);
-                try {
-                  const { data: members } = await github.rest.teams.listMembersInOrg({
-                    org: context.repo.owner,
-                    team_slug: resolvedTeam
-                  });
-                  teamMembers.push(...members.map(member => member.login));
-                } catch (error) {
-                  console.warn(`Could not fetch members for team ${resolvedTeam}: ${error.message}`);
-                }
-              }
-              return teamMembers;
-            }
-
-            // Process reviewers and assignees
-            const reviewTeams = (branchConfig.review_teams || []).map(replacePlaceholders);
-            const assigneeTeams = (branchConfig.assignees || []).map(replacePlaceholders);
-
-            const reviewers = await expandTeamMembers(reviewTeams);
-            const assignees = await expandTeamMembers(assigneeTeams);
-
-            // Assign reviewers
-            if (reviewers.length > 0) {
-              await github.rest.pulls.requestReviewers({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                pull_number: prNumber,
-                reviewers: reviewers
-              });
-              console.log(`Assigned reviewers: ${reviewers.join(', ')}`);
-            }
-
-            // Assign assignees
-            if (assignees.length > 0) {
-              await github.rest.issues.addAssignees({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: prNumber,
-                assignees: assignees
-              });
-              console.log(`Assigned assignees: ${assignees.join(', ')}`);
-            }
+          GITHUB_ORGANIZATION: ${{ github.repository_owner }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          python .github/scripts/validate_pr_assign_reviewers.py 
