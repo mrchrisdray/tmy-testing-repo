@@ -19,11 +19,7 @@ on:
         default: 'Team-Test-Creation-A'
         type: string
 
-permissions:
-  actions: read
-  contents: read
-  pull-requests: write
-  checks: write
+permissions: write-all
 
 jobs:
   validate-pr-requirements:
@@ -63,7 +59,9 @@ jobs:
           PR_NUMBER: ${{ inputs.pr_number || github.event.pull_request.number }}
           REVIEWERS_CONFIG_PATH: 'REVIEWERS.yml'
         run: |
-          python .github/scripts/validate_pr_requirements.py
+          set -e
+          status=$(python .github/scripts/validate_pr_requirements.py)
+          echo "status=${status}" >> $GITHUB_OUTPUT
 
   block-merge:
     needs: validate-pr-requirements

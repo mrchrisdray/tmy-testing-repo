@@ -31,34 +31,69 @@ def replace_placeholders(text, team_name):
 def expand_team_members(github_obj, org, teams):
     """Expand team members from GitHub teams."""
     team_members = set()  # Using set to avoid duplicates
+    org_obj = github_obj.get_organization(org)
+    print(f"Organization: {org}")
+    
+    # List all teams in organization for debugging
+    try:
+        all_teams = list(org_obj.get_teams())
+        print(f"Available teams in org: {[team.slug for team in all_teams]}")
+    except GithubException as e:
+        print(f"Error listing organization teams: {e}")
+    
     for team_name in teams:
+        print(f"\nProcessing team: {team_name}")
         try:
-            team = github_obj.get_organization(org).get_team_by_slug(team_name)
-            team_members.update(member.login for member in team.get_members())
+            # Try to get team directly first
+            team = org_obj.get_team_by_slug(team_name.lower())  # GitHub team slugs are lowercase
+            print(f"Found team: {team.name}")
+            
+            # List and add team members
+            members = list(team.get_members())
+            print(f"Team members found: {[member.login for member in members]}")
+            team_members.update(member.login for member in members)
+            
         except GithubException as e:
-            print(f"Could not fetch members for team {team_name}: {e}")
+            print(f"Error accessing team {team_name}: {e}")
+            if e.status == 404:
+                print(f"Team not found: {team_name}. Make sure the team exists and the token has proper permissions.")
+            else:
+                print(f"Unexpected error accessing team: {e.data.get('message', str(e))}")
+                
     return list(team_members)
 
 
 def validate_pr_requirements(config_path, pr_number, target_branch, team_name, github_token):
     """Validate pull request review requirements."""
+    print("Starting validation")
+    
     # Load configuration
-    with open(config_path, mode="r", encoding="utf-8") as file:
-        config = yaml.safe_load(file)
+    try:
+        with open(config_path, mode="r", encoding="utf-8") as file:
+            config = yaml.safe_load(file)
+    except Exception as e:
+        print(f"Error loading config file {config_path}: {e}")
+        return False
 
     # Initialize GitHub client
     github_obj = Github(github_token)
     repo = github_obj.get_repo(os.environ.get("GITHUB_REPOSITORY"))
-    pull_request = repo.get_pull(pr_number)
+    
+    try:
+        pull_request = repo.get_pull(pr_number)
+    except GithubException as e:
+        print(f"Error accessing PR #{pr_number}: {e}")
+        return False
 
     # Find branch-specific configuration
     branch_configs = config["pull_requests"]["branches"]
     branch_config = None
-
+    
     print(f"Looking for configuration matching branch: {target_branch}")
     for pattern, cfg in branch_configs.items():
         pattern_clean = pattern.replace("*", "")
-        if pattern == target_branch or (pattern.endswith("*") and target_branch.startswith(pattern_clean)):
+        if (pattern == target_branch or 
+            (pattern.endswith("*") and target_branch.startswith(pattern_clean))):
             if not (cfg.get("exclude") and target_branch in cfg["exclude"]):
                 branch_config = cfg
                 print(f"Found matching configuration for pattern: {pattern}")
@@ -75,25 +110,41 @@ def validate_pr_requirements(config_path, pr_number, target_branch, team_name, g
     # Get required teams and their members
     required_teams = [replace_placeholders(team, team_name) for team in branch_config.get("required_teams", [])]
     print(f"Required teams: {required_teams}")
-
+    
     required_team_members = expand_team_members(github_obj, repo.organization.login, required_teams)
+    if not required_team_members:
+        print("Warning: No team members found. This might indicate a configuration or permissions issue.")
     print(f"Required team members: {required_team_members}")
 
     # Get all reviews
-    reviews = list(pull_request.get_reviews())
-
+    try:
+        reviews = list(pull_request.get_reviews())
+        print(f"Found {len(reviews)} reviews")
+    except GithubException as e:
+        print(f"Error accessing PR reviews: {e}")
+        return False
+    
     # Get the latest review state from each reviewer
     latest_reviews = {}
     for review in reviews:
         latest_reviews[review.user.login] = review.state
+    
+    print(f"Latest review states: {latest_reviews}")
 
     # Count valid approvals from required team members
-    valid_approvals = sum(1 for member in required_team_members if latest_reviews.get(member) == "APPROVED")
-
+    valid_approvals = sum(1 for member in required_team_members 
+                         if latest_reviews.get(member) == "APPROVED")
+    
     print(f"Valid approvals received: {valid_approvals}")
-
+    
+    # Check if we have any required team members before validation
+    if not required_team_members:
+        print("Cannot validate: No required team members found")
+        return False
+    
     # Validate against both required approvals count and required team members
-    is_valid = valid_approvals >= required_approvals and valid_approvals >= len(required_team_members)
+    is_valid = (valid_approvals >= required_approvals and 
+                valid_approvals >= len(required_team_members))
 
     print(f"Validation result: {is_valid}")
     return is_valid
@@ -107,21 +158,26 @@ def main():
         team_name = os.environ.get("TEAM_NAME")
         github_token = os.environ.get("GITHUB_TOKEN")
         target_branch = os.environ.get("TARGET_BRANCH", os.environ.get("GITHUB_BASE_REF", ""))
-
+        
         print(f"Target Branch: {target_branch}")
         print(f"Team Name: {team_name}")
         print(f"Config Path: {config_path}")
-        print("getting PR number")
+
         # Get PR number
+        print("getting PR number")
         pr_number = int(get_pr_number())
         print(f"PR Number: {pr_number}")
-        print("Starting validation")
+
         # Validate PR requirements
         result = validate_pr_requirements(config_path, pr_number, target_branch, team_name, github_token)
-        print(f"Validation result: {result}")
+        
         # Print result for workflow
-        print(f"::set-output name=status::{str(result).lower()}")
-
+        print(f"Validation result: {result}")
+        
+        # Use the new GitHub Actions output syntax
+        with open(os.environ['GITHUB_OUTPUT'], 'a') as fh:
+            print(f'status={str(result).lower()}', file=fh)
+        
         # Exit with appropriate status code
         sys.exit(0 if result else 1)
 
