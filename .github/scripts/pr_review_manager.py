@@ -90,9 +90,9 @@ class PRReviewManager:
         try:
             # Add review teams
             for team in review_teams:
-                team_name = team.replace("{{ team_name }}", os.environ.get("TEAM_NAME", ""))
-                pr.add_to_reviewers(team=team_name)
-
+                team_name = team.replace('{{ team_name }}', os.environ.get('TEAM_NAME', ''))
+                pr.create_review_request(team=team_name)
+                
             # Add assignees
             for assignee in assignees:
                 assignee_name = assignee.replace("{{ team_name }}", os.environ.get("TEAM_NAME", ""))
