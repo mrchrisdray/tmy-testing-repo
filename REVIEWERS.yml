@@ -26,7 +26,6 @@ pull_requests:
       # Required teams to approve before PR can be merged
       required_teams:
         - '{{ team_name }}-reviewers'
-        - '{{ team_name }}-reviewers'
         - '{{ team_name }}-project-owners'
         - '{{ team_name }}-release-managers'
         - '{{ team_name }}-testers'
