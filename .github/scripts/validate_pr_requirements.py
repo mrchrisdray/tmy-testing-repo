@@ -54,12 +54,11 @@ def validate_pr_requirements(config_path, pr_number, target_branch, team_name, g
     # Find branch-specific configuration
     branch_configs = config["pull_requests"]["branches"]
     branch_config = None
-    
+
     print(f"Looking for configuration matching branch: {target_branch}")
     for pattern, cfg in branch_configs.items():
         pattern_clean = pattern.replace("*", "")
-        if (pattern == target_branch or 
-            (pattern.endswith("*") and target_branch.startswith(pattern_clean))):
+        if pattern == target_branch or (pattern.endswith("*") and target_branch.startswith(pattern_clean)):
             if not (cfg.get("exclude") and target_branch in cfg["exclude"]):
                 branch_config = cfg
                 print(f"Found matching configuration for pattern: {pattern}")
@@ -76,27 +75,25 @@ def validate_pr_requirements(config_path, pr_number, target_branch, team_name, g
     # Get required teams and their members
     required_teams = [replace_placeholders(team, team_name) for team in branch_config.get("required_teams", [])]
     print(f"Required teams: {required_teams}")
-    
+
     required_team_members = expand_team_members(github_obj, repo.organization.login, required_teams)
     print(f"Required team members: {required_team_members}")
 
     # Get all reviews
     reviews = list(pull_request.get_reviews())
-    
+
     # Get the latest review state from each reviewer
     latest_reviews = {}
     for review in reviews:
         latest_reviews[review.user.login] = review.state
 
     # Count valid approvals from required team members
-    valid_approvals = sum(1 for member in required_team_members 
-                         if latest_reviews.get(member) == "APPROVED")
-    
+    valid_approvals = sum(1 for member in required_team_members if latest_reviews.get(member) == "APPROVED")
+
     print(f"Valid approvals received: {valid_approvals}")
-    
+
     # Validate against both required approvals count and required team members
-    is_valid = (valid_approvals >= required_approvals and 
-                valid_approvals >= len(required_team_members))
+    is_valid = valid_approvals >= required_approvals and valid_approvals >= len(required_team_members)
 
     print(f"Validation result: {is_valid}")
     return is_valid
@@ -109,7 +106,7 @@ def main():
         team_name = os.environ.get("TEAM_NAME")
         github_token = os.environ.get("GITHUB_TOKEN")
         target_branch = os.environ.get("TARGET_BRANCH", os.environ.get("GITHUB_BASE_REF", ""))
-        
+
         print(f"Target Branch: {target_branch}")
         print(f"Team Name: {team_name}")
         print(f"Config Path: {config_path}")
@@ -120,10 +117,10 @@ def main():
 
         # Validate PR requirements
         result = validate_pr_requirements(config_path, pr_number, target_branch, team_name, github_token)
-        
+
         # Print result for workflow
         print(f"::set-output name=status::{str(result).lower()}")
-        
+
         # Exit with appropriate status code
         sys.exit(0 if result else 1)
 
