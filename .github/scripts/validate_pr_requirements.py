@@ -90,7 +90,9 @@ def main():
     try:
         pr_number = get_pr_number()
         result = validate_pr_requirements(config_path, pr_number, target_branch, team_name, github_token)
-        sys.exit(0 if result else 1)
+        if isinstance(result, bool):
+            sys.exit(0)
+        sys.exit(1)
     except Exception as e:
         print(f"Error: {e}")
         sys.exit(1)
