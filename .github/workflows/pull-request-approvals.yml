@@ -61,7 +61,7 @@ jobs:
           TEAM_NAME: ${{ inputs.team-name || 'Team-Test-Creation-A' }}
           TARGET_BRANCH: ${{ github.base_ref }}
           PR_NUMBER: ${{ inputs.pr_number || github.event.pull_request.number }}
-          REVIEWERS_CONFIG_PATH: './REVIEWERS.yml'
+          REVIEWERS_CONFIG_PATH: '.REVIEWERS.yml'
         run: |
           set -e
           status=$(python .github/scripts/validate_pr_requirements.py) || { echo "Validation failed"; exit 1; }
@@ -101,7 +101,7 @@ jobs:
           TEAM_NAME: ${{ inputs.team-name || 'Team-Test-Creation-A' }}
           TARGET_BRANCH: ${{ github.base_ref }}
           PR_NUMBER: ${{ inputs.pr_number || github.event.pull_request.number }}
-          REVIEWERS_CONFIG_PATH: './REVIEWERS.yml'
+          REVIEWERS_CONFIG_PATH: '.REVIEWERS.yml'
         run: |
           python .github/scripts/validate_block_pr_merge.py
 
@@ -138,6 +138,6 @@ jobs:
           TEAM_NAME: ${{ inputs.team-name || 'Team-Test-Creation-A' }}
           TARGET_BRANCH: ${{ github.base_ref }}
           PR_NUMBER: ${{ inputs.pr_number || github.event.pull_request.number }}
-          REVIEWERS_CONFIG_PATH: './REVIEWERS.yml'
+          REVIEWERS_CONFIG_PATH: '.REVIEWERS.yml'
         run: |
           python .github/scripts/validate_pr_assign_reviewers.py 
