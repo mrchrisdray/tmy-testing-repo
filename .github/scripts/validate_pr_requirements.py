@@ -3,6 +3,7 @@ import sys
 import json
 import yaml
 from github import Github, GithubException
+from typing import List
 
 
 def get_pr_number():
@@ -58,6 +59,36 @@ def get_team_info(github_obj, org, teams):
             team_info[team_name] = {"exists": False, "members": [], "error": str(e)}
 
     return team_info
+
+
+def validate_team_permissions(gh, org_name: str, repo_name: str, team_slug: str) -> bool:
+    """Validate team has correct repository permissions."""
+    try:
+        org = gh.get_organization(org_name)
+        team = org.get_team_by_slug(team_slug)
+        repo = org.get_repo(repo_name)
+        return team.has_in_repos(repo)
+    except Exception as e:
+        print(f"Error checking team permissions: {e}")
+        return False
+
+
+def request_team_reviews(gh, pr, team_slugs: List[str], org_name: str, repo_name: str) -> bool:
+    """Request reviews from teams with permission checks."""
+    try:
+        for team_slug in team_slugs:
+            if not validate_team_permissions(gh, org_name, repo_name, team_slug):
+                print(f"Adding team {team_slug} as repository collaborator...")
+                org = gh.get_organization(org_name)
+                team = org.get_team_by_slug(team_slug)
+                repo = org.get_repo(repo_name)
+                team.add_to_repos(repo)
+
+        pr.create_review_request(team_reviewers=team_slugs)
+        return True
+    except Exception as e:
+        print(f"Error requesting reviews: {e}")
+        return False
 
 
 def validate_pr_requirements(config_path, pr_number, target_branch, team_name, github_token):
@@ -125,6 +156,13 @@ def validate_pr_requirements(config_path, pr_number, target_branch, team_name, g
                 print(f"Warning: Team {team_name} exists but has no members")
             all_team_members.update(members)
             team_slugs.append(f"@{repo.organization.login}/{info['team_slug']}")
+
+    # Add teams as collaborators if needed
+    repo_name = os.getenv("GITHUB_REPOSITORY").split("/")[1]
+    for team in required_teams:
+        if not validate_team_permissions(github_obj, repo.organization.login, repo_name, team):
+            print(f"Team {team} needs repository access")
+            request_team_reviews(github_obj, pull_request, [team], repo.organization.login, repo_name)
 
     # Try to assign teams as reviewers even if they're empty
     try:
