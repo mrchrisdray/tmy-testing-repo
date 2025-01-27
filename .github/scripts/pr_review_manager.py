@@ -2,7 +2,7 @@ import os
 import re
 from typing import Dict, List, Optional
 import yaml
-from github import Github
+from github import Github, GithubException
 
 
 class PRReviewManager:
@@ -18,8 +18,10 @@ class PRReviewManager:
         try:
             config_file = self.repo.get_contents("REVIEWERS.yml")
             return yaml.safe_load(config_file.decoded_content.decode("utf-8"))
+        except (yaml.YAMLError, AttributeError, UnicodeDecodeError) as e:
+            raise ValueError(f"Failed to parse REVIEWERS.yml: {str(e)}") from e
         except Exception as e:
-            raise Exception(f"Failed to load REVIEWERS.yml: {str(e)}") from e
+            raise FileNotFoundError(f"Failed to load REVIEWERS.yml: {str(e)}") from e
 
     def _get_branch_config(self, branch_name: str) -> Optional[Dict]:
         """Get the configuration for a specific branch."""
