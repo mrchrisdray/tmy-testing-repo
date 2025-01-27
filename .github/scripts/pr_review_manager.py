@@ -2,7 +2,7 @@ import os
 import re
 from typing import Dict, List, Optional
 import yaml
-from github import Github, GithubException
+from github import Github
 
 
 class PRReviewManager:
