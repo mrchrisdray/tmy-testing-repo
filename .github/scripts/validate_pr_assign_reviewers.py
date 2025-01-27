@@ -67,7 +67,7 @@ def assign_reviewers_and_assignees(config_path, pr_number, target_branch, team_n
 
 def main():
     # Get environment variables
-    config_path = os.environ.get("REVIEWERS_CONFIG_PATH", ".REVIEWERS.yml")
+    config_path = os.environ.get("REVIEWERS_CONFIG_PATH", "REVIEWERS.yml")
     pr_number = int(os.environ.get("PR_NUMBER", 0))
     target_branch = os.environ.get("TARGET_BRANCH", "")
     team_name = os.environ.get("TEAM_NAME", "team-test-creation-a")

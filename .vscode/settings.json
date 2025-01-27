@@ -30,5 +30,6 @@
     ],
     "githubPullRequests.ignoredPullRequestBranches": [
         "main"
-    ]
+    ],
+    "python.analysis.typeCheckingMode": "strict"
 }
