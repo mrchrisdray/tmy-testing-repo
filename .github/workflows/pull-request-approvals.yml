@@ -63,7 +63,7 @@ jobs:
 
   block-merge:
     needs: validate-pr-requirements
-    if: needs.validate-pr-requirements.outputs.status == 'false'
+    # if: needs.validate-pr-requirements.outputs.status == 'false'
     runs-on: ubuntu-latest
     environment: 
       name: cloud-platform
