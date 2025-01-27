@@ -110,6 +110,8 @@ class PRReviewManager:
             assignees = set()
             for team in assignee_teams:
                 team_slug = team.replace("{{ team_name }}", os.environ.get("TEAM_NAME", ""))
+                # Convert team slug to lowercase and replace spaces with hyphens
+                team_slug = team_slug.lower().replace(" ", "-")
                 # Get all members of the team and add them to assignees set
                 team_members = self._get_team_members(team_slug)
                 assignees.update(team_members)
