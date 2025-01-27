@@ -59,45 +59,9 @@ jobs:
           PR_NUMBER: ${{ inputs.pr_number || github.event.pull_request.number }}
           REVIEWERS_CONFIG_PATH: 'REVIEWERS.yml'
         run: |
-          python .github/scripts/validate_pr_requirements.py
-
-  block-merge:
-    needs: validate-pr-requirements
-    # if: needs.validate-pr-requirements.outputs.status == 'false'
-    runs-on: ubuntu-latest
-    environment: 
-      name: cloud-platform
-    steps:
-      - uses: actions/create-github-app-token@v1
-        id: app-token
-        with:
-          app-id: ${{ vars.APP_ID }}
-          private-key: ${{ secrets.APP_KEY }}
-          owner: ${{ github.repository_owner }}
-
-      - uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-    
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install PyYAML PyGithub gitpython
-     
-      - name: Block Merge
-        env:
-          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
-          GITHUB_ORGANIZATION: ${{ github.repository_owner }}
-          GITHUB_REPOSITORY: ${{ github.repository }}
-          TEAM_NAME: ${{ inputs.team-name || 'Team-Test-Creation-A' }}
-          TARGET_BRANCH: ${{ github.base_ref }}
-          PR_NUMBER: ${{ inputs.pr_number || github.event.pull_request.number }}
-          REVIEWERS_CONFIG_PATH: 'REVIEWERS.yml'
-        run: |
-          python .github/scripts/validate_block_pr_merge.py
+          set -e
+          status=$(python .github/scripts/validate_pr_requirements.py)
+          echo "status=${status}" >> $GITHUB_OUTPUT
 
   assign-reviewers-and-assignees:
     needs: validate-pr-requirements
