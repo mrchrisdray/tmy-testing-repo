@@ -16,7 +16,6 @@ pull_requests:
         - '{{ team_name }}-project-owners'
         - '{{ team_name }}-release-managers'
         - '{{ team_name }}-security'
-        - '{{ team_name }}-reviewers'
         - '{{ team_name }}-testers'
 
       # List of teams to be assigned as assignees
@@ -27,11 +26,10 @@ pull_requests:
       # Required teams to approve before PR can be merged
       required_teams:
         - '{{ team_name }}-reviewers'
+        - '{{ team_name }}-reviewers'
         - '{{ team_name }}-project-owners'
         - '{{ team_name }}-release-managers'
-        - '{{ team_name }}-reviewers'
         - '{{ team_name }}-testers'
-    
     # Configuration for the 'develop' branch
     develop:
       review_teams:
@@ -91,7 +89,7 @@ pull_requests:
       exclude:
         - "bugfix/ISSUE-666"
 
-    # Configuration for all branches starting with 'bugfix/'
+    # Configuration for all branches starting with 'hotfix/'
     "hotfix/*":
       review_teams:
         - '{{ team_name }}-release-managers'
