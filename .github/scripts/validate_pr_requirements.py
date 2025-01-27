@@ -101,6 +101,7 @@ def validate_pr_requirements(config_path, pr_number, target_branch, team_name, g
 
 def main():
     try:
+        print("Starting PR requirements validation...")
         # Get environment variables
         config_path = os.environ.get("REVIEWERS_CONFIG_PATH", "REVIEWERS.yml")
         team_name = os.environ.get("TEAM_NAME")
@@ -110,14 +111,14 @@ def main():
         print(f"Target Branch: {target_branch}")
         print(f"Team Name: {team_name}")
         print(f"Config Path: {config_path}")
-
+        print("getting PR number")
         # Get PR number
         pr_number = int(get_pr_number())
         print(f"PR Number: {pr_number}")
-
+        print("Starting validation")
         # Validate PR requirements
         result = validate_pr_requirements(config_path, pr_number, target_branch, team_name, github_token)
-
+        print(f"Validation result: {result}")
         # Print result for workflow
         print(f"::set-output name=status::{str(result).lower()}")
 
