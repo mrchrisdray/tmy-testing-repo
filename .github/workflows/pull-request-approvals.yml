@@ -63,8 +63,7 @@ jobs:
           PR_NUMBER: ${{ inputs.pr_number || github.event.pull_request.number }}
           REVIEWERS_CONFIG_PATH: 'REVIEWERS.yml'
         run: |
-          set -e
-          status=$(python .github/scripts/validate_pr_requirements.py) || { echo "Validation failed"; exit 1; }
+          status=$(python .github/scripts/validate_pr_requirements.py)
           echo "status=${status}" >> $GITHUB_OUTPUT
 
   block-merge:
