@@ -120,12 +120,20 @@ class PRReviewManager:
             if pr.user.login in assignees:
                 assignees.remove(pr.user.login)
 
-            # Add assignees in batches to handle GitHub's limitation
-            # GitHub allows up to 10 assignees per request
-            assignees_list = list(assignees)
-            for i in range(0, len(assignees_list), 10):
-                batch = assignees_list[i : i + 10]
-                pr.add_to_assignees(*batch)
+            # Only proceed if there are assignees to add
+            if assignees:
+                try:
+                    # Add assignees in batches to handle GitHub's limitation
+                    # GitHub allows up to 10 assignees per request
+                    assignees_list = list(assignees)
+                    for i in range(0, len(assignees_list), 10):
+                        batch = assignees_list[i : i + 10]
+                        pr.add_to_assignees(*batch)
+                except Exception as e:
+                    if "404" in str(e):
+                        print(f"Warning: Unable to assign users to PR #{pr.number}. No more users found.")
+                    else:
+                        raise
 
             # Check review requirements
             meets_requirements = self._check_required_reviews(pr, branch_config)
