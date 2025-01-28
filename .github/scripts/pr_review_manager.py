@@ -95,7 +95,7 @@ class PRReviewManager:
             # Debug organization and team information
             print(f"Debug: Organization name: {self.org.login}")
             print(f"Debug: Looking for team with slug: {team_slug}")
-            
+
             # List all teams in organization for debugging
             try:
                 all_teams = list(self.org.get_teams())
@@ -108,9 +108,9 @@ class PRReviewManager:
             team_variations = [
                 team_slug,
                 team_slug.lower(),
-                team_slug.replace('-', ''),
-                team_slug.replace('-', '_'),
-                team_slug.replace('_', '-')
+                team_slug.replace("-", ""),
+                team_slug.replace("-", "_"),
+                team_slug.replace("_", "-"),
             ]
 
             team = None
@@ -234,10 +234,7 @@ class PRReviewManager:
             for team in assignee_teams:
                 # Clean up the team slug
                 team_slug = (
-                    team.replace("{{ team_name }}", os.environ.get("TEAM_NAME", ""))
-                    .lower()
-                    .strip()
-                    .replace(" ", "-")
+                    team.replace("{{ team_name }}", os.environ.get("TEAM_NAME", "")).lower().strip().replace(" ", "-")
                 )
                 print(f"Debug: Processing assignee team: {team_slug}")
                 team_members = self._get_team_members(team_slug)
