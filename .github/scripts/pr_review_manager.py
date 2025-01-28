@@ -21,9 +21,7 @@ class PRReviewManager:
         try:
             # Get the PR's head branch ref and sha
             head_sha = self.pr.head.sha
-            print(
-                f"Debug: Looking for REVIEWERS.yml in PR #{self.pr_number} head branch: {self.pr.head.ref} (SHA: {head_sha})"
-            )
+            print(f"Debug: Looking for REVIEWERS.yml in PR #{self.pr_number} head branch: {self.pr.head.ref} (SHA: {head_sha})")
 
             try:
                 # Try to get the file from the PR's head branch
@@ -38,16 +36,16 @@ class PRReviewManager:
             content = config_file.decoded_content
             if not content:
                 raise ValueError("REVIEWERS.yml is empty")
-
+            
             print(f"Debug: Successfully loaded REVIEWERS.yml, size: {len(content)} bytes")
-
+            
             config = yaml.safe_load(content.decode("utf-8"))
             if not config:
                 raise ValueError("REVIEWERS.yml contains no valid configuration")
-
+            
             print("Debug: Successfully parsed YAML configuration")
             return config
-
+            
         except yaml.YAMLError as e:
             print(f"Debug: YAML parsing error - {str(e)}")
             raise ValueError(f"Failed to parse REVIEWERS.yml: {str(e)}") from e
@@ -94,6 +92,7 @@ class PRReviewManager:
         try:
             team = self.org.get_team_by_slug(team_slug)
             members = list(team.get_members())
+            print(f"team found: {team} from {team_slug}")
             if not members:
                 print(f"Warning: No members found in team {team_slug}")
                 return []
@@ -181,6 +180,7 @@ class PRReviewManager:
             # Add assignees from teams
             assignees = set()
             for team in assignee_teams:
+                team_slug = team.replace("{{ team_name }}", os.environ.get("TEAM_NAME", "")).lower()
                 team_members = self._get_team_members(team_slug)
                 if team_members:
                     assignees.update(team_members)
@@ -242,9 +242,7 @@ def main():
     try:
         repo = gh.get_repo(repository)
         print(f"Debug: Successfully accessed repository {repository}")
-        print(
-            f"Debug: Repository permissions - admin: {repo.permissions.admin}, push: {repo.permissions.push}, pull: {repo.permissions.pull}"
-        )
+        print(f"Debug: Repository permissions - admin: {repo.permissions.admin}, push: {repo.permissions.push}, pull: {repo.permissions.pull}")
     except Exception as e:
         print(f"Debug: Error accessing repository - {str(e)}")
 
