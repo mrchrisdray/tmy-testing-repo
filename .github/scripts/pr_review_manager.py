@@ -20,36 +20,68 @@ class PRReviewManager:
             # Get repository contents at root level
             contents = self.repo.get_contents("")
             config_file = None
-
+            
             # Look specifically for REVIEWERS.yml in root contents
             for content_file in contents:
                 if content_file.name == "REVIEWERS.yml":
                     config_file = content_file
                     break
-
+            
             if not config_file:
                 print("Debug: Files found in root:", [f.name for f in contents])
                 raise FileNotFoundError("REVIEWERS.yml not found in repository root")
-
+            
             content = config_file.decoded_content
             if not content:
                 raise ValueError("REVIEWERS.yml is empty")
-
+            
             print(f"Debug: Successfully loaded REVIEWERS.yml, size: {len(content)} bytes")
-
+            
             config = yaml.safe_load(content.decode("utf-8"))
             if not config:
                 raise ValueError("REVIEWERS.yml contains no valid configuration")
-
+            
             print("Debug: Successfully parsed YAML configuration")
             return config
-
+            
         except yaml.YAMLError as e:
             print(f"Debug: YAML parsing error - {str(e)}")
             raise ValueError(f"Failed to parse REVIEWERS.yml: {str(e)}") from e
         except Exception as e:
             print(f"Debug: Unexpected error while loading config - {str(e)}")
             raise FileNotFoundError(f"Failed to load REVIEWERS.yml: {str(e)}") from e
+
+    def _get_branch_config(self, branch_name: str) -> Optional[Dict]:
+        """Get the configuration for a specific branch."""
+        try:
+            branch_configs = self.config["pull_requests"]["branches"]
+            
+            # First check for exact match
+            if branch_name in branch_configs:
+                print(f"Debug: Found exact match configuration for branch {branch_name}")
+                return branch_configs[branch_name]
+
+            # Then check pattern matches
+            for pattern, config in branch_configs.items():
+                if "*" in pattern:
+                    regex_pattern = pattern.replace("*", ".*")
+                    if re.match(regex_pattern, branch_name):
+                        # Check if branch is excluded
+                        if "exclude" in config and branch_name in config["exclude"]:
+                            print(f"Debug: Branch {branch_name} is excluded from pattern {pattern}")
+                            continue
+                        print(f"Debug: Found pattern match configuration for branch {branch_name} using pattern {pattern}")
+                        return config
+
+            print(f"Debug: No matching configuration found for branch {branch_name}")
+            return None
+            
+        except KeyError as e:
+            print(f"Debug: Missing key in configuration: {str(e)}")
+            return None
+        except Exception as e:
+            print(f"Debug: Error getting branch configuration: {str(e)}")
+            return None
 
     def _get_team_members(self, team_slug: str) -> List[str]:
         """Get list of usernames for members of a team."""
@@ -70,12 +102,57 @@ class PRReviewManager:
             print(f"Warning: Unexpected error getting team members for {team_slug}: {str(e)}")
             return []
 
+    def _check_required_reviews(self, pr, branch_config: Dict) -> bool:
+        """Check if the PR has met the required review conditions."""
+        try:
+            required_approvals = branch_config.get("required_approvals", 0)
+            required_teams = branch_config.get("required_teams", [])
+
+            # Get all reviews
+            reviews = pr.get_reviews()
+            approved_reviews = {}
+
+            for review in reviews:
+                if review.state == "APPROVED":
+                    reviewer = review.user
+                    try:
+                        # Get user's teams in this repository
+                        user_teams = [team.name for team in reviewer.get_teams()]
+                        # Store the approval with the teams the reviewer belongs to
+                        approved_reviews[reviewer.login] = user_teams
+                    except GithubException as e:
+                        print(f"Warning: Could not get teams for user {reviewer.login}: {str(e)}")
+                        continue
+
+            # Check number of approvals
+            if len(approved_reviews) < required_approvals:
+                print(f"Debug: Not enough approvals. Got {len(approved_reviews)}, need {required_approvals}")
+                return False
+
+            # Check required teams
+            if required_teams:
+                approved_teams = set()
+                for user_teams in approved_reviews.values():
+                    approved_teams.update(user_teams)
+
+                if not all(team in approved_teams for team in required_teams):
+                    missing_teams = set(required_teams) - approved_teams
+                    print(f"Debug: Missing required team approvals from: {missing_teams}")
+                    return False
+
+            return True
+            
+        except Exception as e:
+            print(f"Warning: Error checking required reviews: {str(e)}")
+            return False
+
     def process_pull_request(self, pr_number: int):
         """Process a pull request according to the configuration."""
         pr = self.repo.get_pull(pr_number)
         branch_name = pr.base.ref
+        print(f"Debug: Processing PR #{pr_number} targeting branch {branch_name}")
+        
         branch_config = self._get_branch_config(branch_name)
-
         if not branch_config:
             print(f"No configuration found for branch: {branch_name}")
             return
@@ -114,7 +191,7 @@ class PRReviewManager:
                     # Add assignees in batches to handle GitHub's limitation
                     assignees_list = list(assignees)
                     for i in range(0, len(assignees_list), 10):
-                        batch = assignees_list[i : i + 10]
+                        batch = assignees_list[i:i+10]
                         pr.add_to_assignees(*batch)
                         print(f"Successfully added assignees: {', '.join(batch)}")
                 except GithubException as e:
@@ -132,14 +209,14 @@ class PRReviewManager:
                         state="pending",
                         target_url="",
                         description="Required reviews not yet met",
-                        context=status_context,
+                        context=status_context
                     )
                 else:
                     self.repo.get_commit(pr.head.sha).create_status(
                         state="success",
                         target_url="",
                         description="All review requirements met",
-                        context=status_context,
+                        context=status_context
                     )
             except GithubException as e:
                 print(f"Warning: Could not update status check: {str(e)}")
@@ -160,9 +237,7 @@ def main():
     try:
         repo = gh.get_repo(repository)
         print(f"Debug: Successfully accessed repository {repository}")
-        print(
-            f"Debug: Repository permissions - admin: {repo.permissions.admin}, push: {repo.permissions.push}, pull: {repo.permissions.pull}"
-        )
+        print(f"Debug: Repository permissions - admin: {repo.permissions.admin}, push: {repo.permissions.push}, pull: {repo.permissions.pull}")
     except Exception as e:
         print(f"Debug: Error accessing repository - {str(e)}")
 
