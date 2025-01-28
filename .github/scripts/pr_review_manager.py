@@ -192,9 +192,9 @@ class PRReviewManager:
                     assignees.update(team_members)
                     print(f"Found {len(team_members)} members in team {team_slug}")
 
-            # Filter out the PR creator from assignees if present
-            if pr.user.login in assignees:
-                assignees.remove(pr.user.login)
+            # # Filter out the PR creator from assignees if present
+            # if pr.user.login in assignees:
+            #     assignees.remove(pr.user.login)
 
             # Only proceed if there are assignees to add
             if assignees:
