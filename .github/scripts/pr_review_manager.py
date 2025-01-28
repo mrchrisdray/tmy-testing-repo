@@ -7,43 +7,45 @@ from github.GithubException import GithubException
 
 
 class PRReviewManager:
-    def __init__(self, github_token: str, repository: str):
+    def __init__(self, github_token: str, repository: str, pr_number: int):
         """Initialize the PR Review Manager."""
         self.gh = Github(github_token)
         self.repo = self.gh.get_repo(repository)
+        self.pr_number = pr_number
+        self.pr = self.repo.get_pull(pr_number)
         self.config = self._load_config()
         self.org = self.repo.organization
 
     def _load_config(self) -> Dict:
-        """Load the REVIEWERS.yml configuration file from root directory."""
+        """Load the REVIEWERS.yml configuration file from PR's head branch."""
         try:
-            # Get repository contents at root level
-            contents = self.repo.get_contents("")
-            config_file = None
+            # Get the PR's head branch ref and sha
+            head_sha = self.pr.head.sha
+            print(f"Debug: Looking for REVIEWERS.yml in PR #{self.pr_number} head branch: {self.pr.head.ref} (SHA: {head_sha})")
 
-            # Look specifically for REVIEWERS.yml in root contents
-            for content_file in contents:
-                if content_file.name == "REVIEWERS.yml":
-                    config_file = content_file
-                    break
-
-            if not config_file:
-                print("Debug: Files found in root:", [f.name for f in contents])
-                raise FileNotFoundError("REVIEWERS.yml not found in repository root")
+            try:
+                # Try to get the file from the PR's head branch
+                config_file = self.repo.get_contents("REVIEWERS.yml", ref=self.pr.head.ref)
+                print(f"Debug: Found REVIEWERS.yml in PR head branch {self.pr.head.ref}")
+            except Exception as e:
+                print(f"Debug: Could not find REVIEWERS.yml in PR head branch: {str(e)}")
+                # Fallback to try getting from the base branch
+                config_file = self.repo.get_contents("REVIEWERS.yml", ref=self.pr.base.ref)
+                print(f"Debug: Found REVIEWERS.yml in base branch {self.pr.base.ref}")
 
             content = config_file.decoded_content
             if not content:
                 raise ValueError("REVIEWERS.yml is empty")
-
+            
             print(f"Debug: Successfully loaded REVIEWERS.yml, size: {len(content)} bytes")
-
+            
             config = yaml.safe_load(content.decode("utf-8"))
             if not config:
                 raise ValueError("REVIEWERS.yml contains no valid configuration")
-
+            
             print("Debug: Successfully parsed YAML configuration")
             return config
-
+            
         except yaml.YAMLError as e:
             print(f"Debug: YAML parsing error - {str(e)}")
             raise ValueError(f"Failed to parse REVIEWERS.yml: {str(e)}") from e
@@ -239,14 +241,12 @@ def main():
     try:
         repo = gh.get_repo(repository)
         print(f"Debug: Successfully accessed repository {repository}")
-        print(
-            f"Debug: Repository permissions - admin: {repo.permissions.admin}, push: {repo.permissions.push}, pull: {repo.permissions.pull}"
-        )
+        print(f"Debug: Repository permissions - admin: {repo.permissions.admin}, push: {repo.permissions.push}, pull: {repo.permissions.pull}")
     except Exception as e:
         print(f"Debug: Error accessing repository - {str(e)}")
 
     # Initialize and run the PR Review Manager
-    manager = PRReviewManager(github_token, repository)
+    manager = PRReviewManager(github_token, repository, pr_number)
     manager.process_pull_request(pr_number)
 
 
