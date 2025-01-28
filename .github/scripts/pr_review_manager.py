@@ -21,7 +21,9 @@ class PRReviewManager:
         try:
             # Get the PR's head branch ref and sha
             head_sha = self.pr.head.sha
-            print(f"Debug: Looking for REVIEWERS.yml in PR #{self.pr_number} head branch: {self.pr.head.ref} (SHA: {head_sha})")
+            print(
+                f"Debug: Looking for REVIEWERS.yml in PR #{self.pr_number} head branch: {self.pr.head.ref} (SHA: {head_sha})"
+            )
 
             try:
                 # Try to get the file from the PR's head branch
@@ -36,16 +38,16 @@ class PRReviewManager:
             content = config_file.decoded_content
             if not content:
                 raise ValueError("REVIEWERS.yml is empty")
-            
+
             print(f"Debug: Successfully loaded REVIEWERS.yml, size: {len(content)} bytes")
-            
+
             config = yaml.safe_load(content.decode("utf-8"))
             if not config:
                 raise ValueError("REVIEWERS.yml contains no valid configuration")
-            
+
             print("Debug: Successfully parsed YAML configuration")
             return config
-            
+
         except yaml.YAMLError as e:
             print(f"Debug: YAML parsing error - {str(e)}")
             raise ValueError(f"Failed to parse REVIEWERS.yml: {str(e)}") from e
@@ -241,7 +243,9 @@ def main():
     try:
         repo = gh.get_repo(repository)
         print(f"Debug: Successfully accessed repository {repository}")
-        print(f"Debug: Repository permissions - admin: {repo.permissions.admin}, push: {repo.permissions.push}, pull: {repo.permissions.pull}")
+        print(
+            f"Debug: Repository permissions - admin: {repo.permissions.admin}, push: {repo.permissions.push}, pull: {repo.permissions.pull}"
+        )
     except Exception as e:
         print(f"Debug: Error accessing repository - {str(e)}")
 
