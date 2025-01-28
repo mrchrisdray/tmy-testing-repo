@@ -181,7 +181,6 @@ class PRReviewManager:
             # Add assignees from teams
             assignees = set()
             for team in assignee_teams:
-                team_slug = team.replace("{{ team_name }}", os.environ.get("TEAM_NAME", "")).lower()
                 team_members = self._get_team_members(team_slug)
                 if team_members:
                     assignees.update(team_members)
