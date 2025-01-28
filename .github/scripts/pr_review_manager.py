@@ -19,30 +19,30 @@ class PRReviewManager:
             # Get repository contents at root level
             contents = self.repo.get_contents("")
             config_file = None
-            
+
             # Look specifically for REVIEWERS.yml in root contents
             for content_file in contents:
                 if content_file.name == "REVIEWERS.yml":
                     config_file = content_file
                     break
-            
+
             if not config_file:
                 print("Debug: Files found in root:", [f.name for f in contents])
                 raise FileNotFoundError("REVIEWERS.yml not found in repository root")
-            
+
             content = config_file.decoded_content
             if not content:
                 raise ValueError("REVIEWERS.yml is empty")
-            
+
             print(f"Debug: Successfully loaded REVIEWERS.yml, size: {len(content)} bytes")
-            
+
             config = yaml.safe_load(content.decode("utf-8"))
             if not config:
                 raise ValueError("REVIEWERS.yml contains no valid configuration")
-            
+
             print("Debug: Successfully parsed YAML configuration")
             return config
-            
+
         except yaml.YAMLError as e:
             print(f"Debug: YAML parsing error - {str(e)}")
             raise ValueError(f"Failed to parse REVIEWERS.yml: {str(e)}") from e
@@ -205,6 +205,7 @@ def main():
     # Initialize and run the PR Review Manager
     manager = PRReviewManager(github_token, repository)
     manager.process_pull_request(pr_number)
+
 
 if __name__ == "__main__":
     main()
