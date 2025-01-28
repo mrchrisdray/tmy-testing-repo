@@ -20,30 +20,30 @@ class PRReviewManager:
             # Get repository contents at root level
             contents = self.repo.get_contents("")
             config_file = None
-            
+
             # Look specifically for REVIEWERS.yml in root contents
             for content_file in contents:
                 if content_file.name == "REVIEWERS.yml":
                     config_file = content_file
                     break
-            
+
             if not config_file:
                 print("Debug: Files found in root:", [f.name for f in contents])
                 raise FileNotFoundError("REVIEWERS.yml not found in repository root")
-            
+
             content = config_file.decoded_content
             if not content:
                 raise ValueError("REVIEWERS.yml is empty")
-            
+
             print(f"Debug: Successfully loaded REVIEWERS.yml, size: {len(content)} bytes")
-            
+
             config = yaml.safe_load(content.decode("utf-8"))
             if not config:
                 raise ValueError("REVIEWERS.yml contains no valid configuration")
-            
+
             print("Debug: Successfully parsed YAML configuration")
             return config
-            
+
         except yaml.YAMLError as e:
             print(f"Debug: YAML parsing error - {str(e)}")
             raise ValueError(f"Failed to parse REVIEWERS.yml: {str(e)}") from e
@@ -114,7 +114,7 @@ class PRReviewManager:
                     # Add assignees in batches to handle GitHub's limitation
                     assignees_list = list(assignees)
                     for i in range(0, len(assignees_list), 10):
-                        batch = assignees_list[i:i+10]
+                        batch = assignees_list[i : i + 10]
                         pr.add_to_assignees(*batch)
                         print(f"Successfully added assignees: {', '.join(batch)}")
                 except GithubException as e:
@@ -132,14 +132,14 @@ class PRReviewManager:
                         state="pending",
                         target_url="",
                         description="Required reviews not yet met",
-                        context=status_context
+                        context=status_context,
                     )
                 else:
                     self.repo.get_commit(pr.head.sha).create_status(
                         state="success",
                         target_url="",
                         description="All review requirements met",
-                        context=status_context
+                        context=status_context,
                     )
             except GithubException as e:
                 print(f"Warning: Could not update status check: {str(e)}")
@@ -160,7 +160,9 @@ def main():
     try:
         repo = gh.get_repo(repository)
         print(f"Debug: Successfully accessed repository {repository}")
-        print(f"Debug: Repository permissions - admin: {repo.permissions.admin}, push: {repo.permissions.push}, pull: {repo.permissions.pull}")
+        print(
+            f"Debug: Repository permissions - admin: {repo.permissions.admin}, push: {repo.permissions.push}, pull: {repo.permissions.pull}"
+        )
     except Exception as e:
         print(f"Debug: Error accessing repository - {str(e)}")
 
