@@ -42,6 +42,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ steps.app-token.outputs.token  }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
+          GITHUB_ORGANIZATION: ${{ github.repository_owner }}
           TEAM_NAME: 'Team-Test-Creation-A'  # Replace with your team name
         run: | 
           python .github/scripts/pr_review_manager.py

@@ -21,9 +21,7 @@ class PRReviewManager:
         try:
             # Get the PR's head branch ref and sha
             head_sha = self.pr.head.sha
-            print(
-                f"Debug: Looking for REVIEWERS.yml in PR #{self.pr_number} head branch: {self.pr.head.ref} (SHA: {head_sha})"
-            )
+            print(f"Debug: Looking for REVIEWERS.yml in PR #{self.pr_number} head branch: {self.pr.head.ref} (SHA: {head_sha})")
 
             try:
                 # Try to get the file from the PR's head branch
@@ -38,16 +36,16 @@ class PRReviewManager:
             content = config_file.decoded_content
             if not content:
                 raise ValueError("REVIEWERS.yml is empty")
-
+            
             print(f"Debug: Successfully loaded REVIEWERS.yml, size: {len(content)} bytes")
-
+            
             config = yaml.safe_load(content.decode("utf-8"))
             if not config:
                 raise ValueError("REVIEWERS.yml contains no valid configuration")
-
+            
             print("Debug: Successfully parsed YAML configuration")
             return config
-
+            
         except yaml.YAMLError as e:
             print(f"Debug: YAML parsing error - {str(e)}")
             raise ValueError(f"Failed to parse REVIEWERS.yml: {str(e)}") from e
@@ -89,71 +87,21 @@ class PRReviewManager:
             print(f"Debug: Error getting branch configuration: {str(e)}")
             return None
 
-    def _get_team_members(self, team_slug: str) -> List[str]:
+    def _get_team_members(self, team_slug: str, org) -> List[str]:
         """Get list of usernames for members of a team."""
         try:
-            # Debug organization and team information
-            print(f"Debug: Organization name: {self.org.login}")
-            print(f"Debug: Looking for team with slug: {team_slug}")
-
-            # List all teams in organization for debugging
-            try:
-                all_teams = list(self.org.get_teams())
-                print(f"Debug: Available teams in org: {', '.join(team.name for team in all_teams)}")
-                print(f"Debug: Available team slugs: {', '.join(team.slug for team in all_teams)}")
-            except Exception as e:
-                print(f"Debug: Could not list teams: {str(e)}")
-
-            # Try different variations of the team slug
-            team_variations = [
-                team_slug,
-                team_slug.lower(),
-                team_slug.replace("-", ""),
-                team_slug.replace("-", "_"),
-                team_slug.replace("_", "-"),
-            ]
-
-            team = None
-            for variation in team_variations:
-                try:
-                    print(f"Debug: Trying to find team with slug: {variation}")
-                    team = self.org.get_team_by_slug(variation)
-                    if team:
-                        print(f"Debug: Successfully found team with slug: {variation}")
-                        break
-                except GithubException as e:
-                    print(f"Debug: Could not find team with slug {variation}: {str(e)}")
-                    continue
-
-            if not team:
-                # Try finding the team by name instead of slug
-                for org_team in all_teams:
-                    if org_team.name.lower() == team_slug.lower():
-                        team = org_team
-                        print(f"Debug: Found team by name instead of slug: {org_team.name}")
-                        break
-
-            if not team:
-                print(f"Warning: Team {team_slug} not found after trying all variations")
-                return []
-
-            # Get team members
+            team = org.get_team_by_slug(team_slug)
             members = list(team.get_members())
+            print(f"team found: {team} from {team_slug}")
             if not members:
                 print(f"Warning: No members found in team {team_slug}")
                 return []
-
-            member_logins = [member.login for member in members]
-            print(f"Debug: Found {len(member_logins)} members in team {team_slug}: {', '.join(member_logins)}")
-            return member_logins
-
+            return [member.login for member in members]
         except GithubException as e:
             if e.status == 404:
                 print(f"Warning: Team {team_slug} not found")
-                print(f"Debug: GitHub API error message: {e.data.get('message', 'No message')}")
-            else:
-                print(f"Warning: Error accessing team {team_slug}: {str(e)}")
-                print(f"Debug: Error status: {e.status}, Data: {e.data}")
+                return []
+            print(f"Warning: Error accessing team {team_slug}: {str(e)}")
             return []
         except Exception as e:
             print(f"Warning: Unexpected error getting team members for {team_slug}: {str(e)}")
@@ -203,7 +151,7 @@ class PRReviewManager:
             print(f"Warning: Error checking required reviews: {str(e)}")
             return False
 
-    def process_pull_request(self, pr_number: int):
+    def process_pull_request(self, pr_number: int, org):
         """Process a pull request according to the configuration."""
         pr = self.repo.get_pull(pr_number)
         branch_name = pr.base.ref
@@ -221,7 +169,12 @@ class PRReviewManager:
         try:
             # Add review teams using team slugs
             for team in review_teams:
-                team_slug = team.replace("{{ team_name }}", os.environ.get("TEAM_NAME", "")).lower()
+                team_slug = (
+                team.replace("{{ team_name }}", os.environ.get("TEAM_NAME", ""))
+                .lower()
+                .strip()
+                .replace(" ", "-")
+                )
                 try:
                     pr.create_review_request(team_reviewers=[team_slug])
                     print(f"Successfully requested review from team: {team_slug}")
@@ -232,12 +185,13 @@ class PRReviewManager:
             # Add assignees from teams
             assignees = set()
             for team in assignee_teams:
-                # Clean up the team slug
                 team_slug = (
-                    team.replace("{{ team_name }}", os.environ.get("TEAM_NAME", "")).lower().strip().replace(" ", "-")
+                team.replace("{{ team_name }}", os.environ.get("TEAM_NAME", ""))
+                .lower()
+                .strip()
+                .replace(" ", "-")
                 )
-                print(f"Debug: Processing assignee team: {team_slug}")
-                team_members = self._get_team_members(team_slug)
+                team_members = self._get_team_members(team_slug, org)
                 if team_members:
                     assignees.update(team_members)
                     print(f"Found {len(team_members)} members in team {team_slug}")
@@ -292,21 +246,21 @@ def main():
     github_token = os.environ["GITHUB_TOKEN"]
     repository = os.environ["GITHUB_REPOSITORY"]
     pr_number = int(os.environ["PR_NUMBER"])
+    org_name = os.environ["GITHUB_ORGANIZATION"]
 
     # Debug: Check repository access
     gh = Github(github_token)
+    org = gh.get_organization(org_name)
     try:
         repo = gh.get_repo(repository)
         print(f"Debug: Successfully accessed repository {repository}")
-        print(
-            f"Debug: Repository permissions - admin: {repo.permissions.admin}, push: {repo.permissions.push}, pull: {repo.permissions.pull}"
-        )
+        print(f"Debug: Repository permissions - admin: {repo.permissions.admin}, push: {repo.permissions.push}, pull: {repo.permissions.pull}")
     except Exception as e:
         print(f"Debug: Error accessing repository - {str(e)}")
 
     # Initialize and run the PR Review Manager
     manager = PRReviewManager(github_token, repository, pr_number)
-    manager.process_pull_request(pr_number)
+    manager.process_pull_request(pr_number, org)
 
 
 if __name__ == "__main__":
