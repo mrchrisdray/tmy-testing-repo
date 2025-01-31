@@ -70,7 +70,7 @@ jobs:
           const reportsDir = 'reports';
           try {
               const reportFiles = fs.readdirSync(reportsDir);
-              const summaryFile = reportFiles.find(f => f.endsWith('_summary.md'));
+              const summaryFile = reportFiles.find(f => f.match(/summary_\d{8}\.md$/));
               
               if (!summaryFile) {
               console.log('No summary file found');
