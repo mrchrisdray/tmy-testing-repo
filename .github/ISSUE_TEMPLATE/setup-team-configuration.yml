@@ -1,6 +1,6 @@
 ---
 name: Setup Team Configuration
-description: Setup parent Team configuration and creates all the child and team structur and access to default Repositories.
+description: Setup parent Team configuration and creates all the child and team structure and access to default Repositories.
 labels:
   - team_setup
 body:
@@ -14,7 +14,7 @@ body:
         - Project required to be the name of the project.
         - Description to describe the team/Project bring setup.
         - Members is optional use @mention to make sure the user has access to GitHub already. This will add members in the parent team. 
-        - Repositories list of default repositoriesfor the team to have access to.
+        - Repositories list of default repositories for the team to have access to.
         - Repository Permissions for the parent team this will be left as read. Default child teams will be setup with different required access. <br>
         <br>
         Example :-<br>

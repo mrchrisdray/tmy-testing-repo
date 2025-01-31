@@ -1,0 +1,98 @@
+name: 🆕 Create New Repository
+description: Request creation of a new repository in our organization
+title: "Create Repository: [Repository Name]"
+labels: ["repository-creation"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Repository Creation Request
+        
+        Please fill out the details below to request a new repository in our organization.
+
+  - type: input
+    id: repo-name
+    attributes:
+      label: Repository Name
+      description: Choose a clear, descriptive name for your repository
+      placeholder: my-project-name
+    validations:
+      required: true
+      regex: '^[a-z0-9_.-]+$'
+      
+  - type: textarea
+    id: description
+    attributes:
+      label: Repository Description
+      description: Provide a brief description of the repository's purpose
+      placeholder: A short description of the project
+    validations:
+      required: false
+      max-length: 280
+
+  - type: dropdown
+    id: visibility
+    attributes:
+      label: Repository Visibility
+      description: Choose the visibility of the repository
+      options:
+        - Private (Recommended)
+        - Public
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: branch-protection
+    attributes:
+      label: Branch Protection Settings
+      description: Configure initial branch protection rules
+      options:
+        - label: Enforce for administrators
+        - label: Require status checks before merging
+        - label: Require 1 pull request review before merging
+
+  - type: textarea
+    id: collaborators
+    attributes:
+      label: Collaborators
+      description: List GitHub usernames of initial collaborators (one per line)
+      placeholder: |
+        github-username1
+        github-username2
+    validations:
+      required: false
+
+  - type: textarea
+    id: teams
+    attributes:
+      label: Teams
+      description: List GitHub team names to grant access (one per line)
+      placeholder: |
+        team-name1
+        team-name2
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional-notes
+    attributes:
+      label: Additional Notes
+      description: Provide any additional context or specific requirements
+      placeholder: Any extra information about the repository
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: guidelines-acknowledgement
+    attributes:
+      label: Guidelines
+      description: Please confirm you've followed our repository naming guidelines
+      options:
+        - label: Repository name is lowercase
+        - label: Used hyphens for spaces
+        - label: Maximum 100 characters
+        - label: Only alphanumeric characters, periods, hyphens, and underscores
+    validations:
+      required: true
