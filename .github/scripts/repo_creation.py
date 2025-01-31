@@ -102,9 +102,9 @@ class RepositoryCreationHandler:
             # Create configuration file
             config_content = yaml.dump(config, default_flow_style=False)
             repo.create_file(
-                path=f'repositories/{metadata.get("name")}.yml', 
-                message='Initial repository configuration',
-                content=config_content.encode('utf-8')
+                path=f'repositories/{metadata.get("name")}.yml',
+                message="Initial repository configuration",
+                content=config_content.encode("utf-8"),
             )
 
             return repo
