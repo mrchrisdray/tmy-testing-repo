@@ -14,6 +14,7 @@
         "ELIF",
         "fstring",
         "indentless",
+        "iterrows",
         "levelname",
         "mypy",
         "pygh",
