@@ -88,7 +88,7 @@ jobs:
                
               if (hasCriticalIssues) {
               await github.rest.issues.create({
-                   owner: context.repo.owner,
+                  owner: context.repo.owner,
                   repo: context.repo.repo,
                   title: '🚨 Repository Health Check Findings',
                   body: `## Repository Health Check Findings
