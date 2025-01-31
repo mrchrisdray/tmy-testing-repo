@@ -1,17 +1,20 @@
-name: Repository Creation Handler
+name: Repository Configuration Validator
 
 on:
-  issues:
-    types: [opened, edited]
+  push:
+    paths:
+      - 'repositories/*.yml'
+  pull_request:
+    paths:
+      - 'repositories/*.yml'
+  workflow_dispatch:
 
 jobs:
-  handle-repository-creation:
-    # Only run for issues with 'repository-creation' label
-    if: contains(github.event.issue.labels.*.name, 'repository-creation')
+  validate-repository-config:
     runs-on: ubuntu-latest
     environment: 
-      name: cloud-platform
-    
+        name: cloud-platform
+      
     steps:
     - uses: actions/create-github-app-token@v1
       id: app-token
@@ -33,10 +36,9 @@ jobs:
         python -m pip install --upgrade pip
         pip install PyGithub PyYAML
     
-    - name: Handle Repository Creation
+    - name: Validate Repository Configuration
       env:
         GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
         GITHUB_ORGANIZATION: ${{ github.repository_owner }}
-        ISSUE_NUMBER: ${{ github.event.issue.number }}
       run: |
-        python .github/scripts/repo_creation_handler.py
+        python .github/scripts/repo_config_manager.py
