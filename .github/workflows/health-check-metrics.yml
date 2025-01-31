@@ -57,25 +57,55 @@ jobs:
         path: reports/
         
     - name: Create Issue for Critical Findings
-      if: success()
       uses: actions/github-script@v7
+      env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
         script: |
           const fs = require('fs');
           const path = require('path');
-          
-          // Read the summary report
-          const reportFiles = fs.readdirSync('reports');
-          const summaryFile = reportFiles.find(f => f.endsWith('_summary.md'));
-          const summaryContent = fs.readFileSync(path.join('reports', summaryFile), 'utf8');
-          
-          // Create an issue if there are critical or high alerts
-          if (summaryContent.includes('Critical Alerts') || summaryContent.includes('RED')) {
-            await github.rest.issues.create({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              title: '🚨 Repository Health Check Findings',
-              body: summaryContent,
-              labels: ['health-check', 'security']
-            });
+            
+          // Find report files
+          const reportsDir = 'reports';
+          try {
+              const reportFiles = fs.readdirSync(reportsDir);
+              const summaryFile = reportFiles.find(f => f.endsWith('_summary.md'));
+              
+              if (!summaryFile) {
+              console.log('No summary file found');
+              return;
+              }
+              
+              const summaryPath = path.join(reportsDir, summaryFile);
+              const summaryContent = fs.readFileSync(summaryPath, 'utf8');
+              
+              // Check for critical issues
+              const hasCriticalIssues = 
+              summaryContent.includes('Total Critical Alerts: [1-9]') || 
+              summaryContent.includes('RED') ||
+              summaryContent.includes('Total High Alerts: [1-9]');
+               
+              if (hasCriticalIssues) {
+              await github.rest.issues.create({
+                   owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  title: '🚨 Repository Health Check Findings',
+                  body: `## Repository Health Check Findings
+                  
+                  Potential critical or high-risk repositories detected:
+                  
+                  \`\`\`
+                  ${summaryContent}
+                  \`\`\`
+                  
+                  Please review the attached reports for detailed information.`,
+                  labels: ['health-check', 'security', 'priority']
+              });
+              console.log('Issue created for critical findings');
+              } else {
+              console.log('No critical issues found');
+              }
+          } catch (error) {
+              console.error('Error processing reports:', error);
           }
