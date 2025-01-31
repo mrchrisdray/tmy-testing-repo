@@ -39,4 +39,4 @@ jobs:
         GITHUB_ORGANIZATION: ${{ github.repository_owner }}
         ISSUE_NUMBER: ${{ github.event.issue.number }}
       run: |
-        python .github/scripts/repo_creation_handler.py
+        python .github/scripts/repo_creation.py
