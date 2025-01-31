@@ -41,4 +41,4 @@ jobs:
         GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
         GITHUB_ORGANIZATION: ${{ github.repository_owner }}
       run: |
-        python .github/scripts/repo_config_manager.py
+        python .github/scripts/repo_configuration_management.py
