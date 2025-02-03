@@ -1,5 +1,6 @@
 import os
 import sys
+import re
 import json
 import logging
 from github import Github, GithubException
@@ -121,10 +122,10 @@ class RepositoryCreationHandler:
         :param visibility: Desired visibility setting
         :return: tuple(bool, str) - (is_valid, message)
         """
-        valid_values = ['private', 'public']
+        valid_values = ['private', 'internal']
         if not visibility.lower() in valid_values:
-            return False, "Visibility must be either 'private' or 'public'"
-        return True, "Visibility setting is valid"s
+            return False, "Visibility must be either 'private' or 'internal'"
+        return True, "Visibility setting is valid"
 
 
     def parse_issue_body(self, body):
