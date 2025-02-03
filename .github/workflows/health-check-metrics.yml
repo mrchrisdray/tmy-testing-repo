@@ -1,0 +1,111 @@
+name: Repository Health Check
+
+on:
+#   schedule:
+#     - cron: '0 0 * * 1'  # Run weekly on Monday at midnight
+  workflow_dispatch:      # Allow manual trigger
+  push:
+    branches:
+      - main            # Run on main branch pushes
+    paths:
+      - 'repo_health_config.yaml'  # Run when config changes
+
+jobs:
+  health-check:
+    runs-on: ubuntu-latest
+    environment: 
+      name: cloud-platform
+    
+    steps:
+    - uses: actions/create-github-app-token@v1
+      id: app-token
+      with:
+        app-id: ${{ vars.APP_ID }}
+        private-key: ${{ secrets.APP_KEY }}
+        owner: ${{ github.repository_owner }}
+
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install PyGithub pandas pyyaml tqdm
+        
+    - name: Create config if not exists
+      run: |
+        if [ ! -f "repo_health_config.yaml" ]; then
+          python .github/scripts/repo_health_check.py --init-config
+        fi
+        
+    - name: Run health check
+      env:
+        GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
+        ORG_NAME: ${{ github.repository_owner }}
+      run: |
+        python .github/scripts/repo_health_check.py
+        
+    - name: Upload reports
+      uses: actions/upload-artifact@v4
+      with:
+        name: health-reports
+        path: reports/
+        
+    - name: Create Issue for Critical Findings
+      uses: actions/github-script@v7
+      env:
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
+      with:
+        github-token: ${{ steps.app-token.outputs.token }}
+        script: |
+          const fs = require('fs');
+          const path = require('path');
+            
+          // Find report files
+          const reportsDir = 'reports';
+          try {
+              const reportFiles = fs.readdirSync(reportsDir);
+              const summaryFile = reportFiles.find(f => f.match(/summary_\d{8}\.md$/));
+              
+              if (!summaryFile) {
+              console.log('No summary file found');
+              return;
+              }
+              
+              const summaryPath = path.join(reportsDir, summaryFile);
+              const summaryContent = fs.readFileSync(summaryPath, 'utf8');
+              
+              // Check for critical issues
+              const hasCriticalIssues = 
+              summaryContent.includes('Total Critical Alerts: [1-9]') || 
+              summaryContent.includes('RED') ||
+              summaryContent.includes('Total High Alerts: [1-9]');
+               
+              if (hasCriticalIssues) {
+              await github.rest.issues.create({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  title: '🚨 Repository Health Check Findings',
+                  body: `## Repository Health Check Findings
+                  
+                  Potential critical or high-risk repositories detected:
+                  
+                  \`\`\`
+                  ${summaryContent}
+                  \`\`\`
+                  
+                  Please review the attached reports for detailed information.`,
+                  labels: ['health-check', 'security', 'priority']
+              });
+              console.log('Issue created for critical findings');
+              } else {
+              console.log('No critical issues found');
+              }
+          } catch (error) {
+              console.error('Error processing reports:', error);
+          }

@@ -1,0 +1,42 @@
+name: Repository Creation Handler
+
+on:
+  issues:
+    types: [opened, edited]
+
+jobs:
+  handle-repository-creation:
+    # Only run for issues with 'repository-creation' label
+    if: contains(github.event.issue.labels.*.name, 'repository-creation')
+    runs-on: ubuntu-latest
+    environment: 
+      name: cloud-platform
+    
+    steps:
+    - uses: actions/create-github-app-token@v1
+      id: app-token
+      with:
+        app-id: ${{ vars.APP_ID }}
+        private-key: ${{ secrets.APP_KEY }}
+        owner: ${{ github.repository_owner }}
+
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install PyGithub PyYAML
+    
+    - name: Handle Repository Creation
+      env:
+        GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
+        GITHUB_ORGANIZATION: ${{ github.repository_owner }}
+        ISSUE_NUMBER: ${{ github.event.issue.number }}
+      run: |
+        python .github/scripts/repo_creation.py

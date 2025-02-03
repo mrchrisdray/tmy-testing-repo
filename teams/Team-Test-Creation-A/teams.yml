@@ -3,49 +3,56 @@ teams:
   description: Github test team creation A setup.
   project: A-TEAM
   repository_permission: read
-  members: null
+  members:
+    - 'mrchrisdray'
   repositories:
     - my-testing-repo
   default_sub_teams:
     - name: Team-Test-Creation-A-developers
       description: Developers for A-TEAM
-      members: []
+      members:
+        - 'mrchrisdray'
       repositories:
         - my-testing-repo
       repository_permissions: write
     - name: Team-Test-Creation-A-testers
       description: Testers for A-TEAM
-      members: []
+      members:
+        - 'mrchrisdray'
       repositories:
         - my-testing-repo
       repository_permissions: triage
     - name: Team-Test-Creation-A-reviewers
       description: Code reviewers for A-TEAM
-      members: []
+      members: mrchrisdray
       repositories:
         - my-testing-repo
       repository_permissions: write
     - name: Team-Test-Creation-A-release-managers
       description: Staging/Production release management for A-TEAM
-      members: []
+      members:
+        - 'mrchrisdray'
       repositories:
         - my-testing-repo
       repository_permissions: maintain
     - name: Team-Test-Creation-A-operations
       description: Operations for A-TEAM
-      members: []
+      members:
+        - 'mrchrisdray'
       repositories:
         - my-testing-repo
       repository_permissions: maintain
     - name: Team-Test-Creation-A-security
       description: Security for A-TEAM
-      members: []
+      members:
+        - 'mrchrisdray'
       repositories:
         - my-testing-repo
       repository_permissions: admin
     - name: Team-Test-Creation-A-project-owners
       description: Owners for A-TEAM
-      members: []
+      members:
+        - 'mrchrisdray'
       repositories:
         - my-testing-repo
       repository_permissions: admin

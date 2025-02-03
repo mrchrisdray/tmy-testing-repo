@@ -1,0 +1,78 @@
+name: 🆕 Create New Repository
+description: Request creation of a new repository in our organization
+title: "Create Repository: [Repository Name]"
+labels: ["repository-creation"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Repository Creation Request
+        
+        Please fill out the details below to request a new repository in our organization.
+        
+        > **Important Guidelines:**
+        > - Repository names must be lowercase
+        > - Use hyphens for spaces
+        > - Maximum 100 characters
+        > - Only alphanumeric characters, periods, hyphens, and underscores allowed
+
+  - type: input
+    id: repo-name
+    attributes:
+      label: Repository Name
+      description: Choose a clear, descriptive name for your repository
+      placeholder: my-project-name
+    validations:
+      required: true
+      regex: '^[a-z0-9_.-]+$'
+      
+  - type: textarea
+    id: description
+    attributes:
+      label: Repository Description
+      description: Provide a brief description of the repository's purpose
+      placeholder: A short description of the project
+    validations:
+      required: true
+      max-length: 280
+
+  - type: dropdown
+    id: visibility
+    attributes:
+      label: Repository Visibility
+      description: Choose the visibility of the repository
+      options:
+        - Private (Recommended)
+        - Public
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: branch-protection
+    attributes:
+      label: Branch Protection Settings
+      description: Configure initial branch protection rules (at least one option required)
+      options:
+        - label: Enforce for administrators
+        - label: Require status checks before merging
+        - label: Require 1 pull request review before merging
+    validations:
+      required: true
+
+  - type: textarea
+    id: teams
+    attributes:
+      label: Teams (Optional)
+      description: List GitHub team names to grant access (one per line)
+      placeholder: |
+        team-name1
+        team-name2
+
+  - type: textarea
+    id: additional-notes
+    attributes:
+      label: Additional Notes (Optional)
+      description: Provide any additional context or specific requirements
+      placeholder: Any extra information about the repository

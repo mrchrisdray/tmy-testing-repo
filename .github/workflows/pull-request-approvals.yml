@@ -1,194 +1,49 @@
 name: Pull Request Approval Workflow
-run-name: ${{ inputs.pr_number!= '' && format('Test Assign Reviewers for PR \#{0}') || format('Assign Reviewers for PR \#{0} to {1}', github.event.pull_request.number, github.base_ref) }}
+run-name: ${{ inputs.pr_number != '' && format('Test Assign Reviewers for PR \#{0}', inputs.pr_number) || format('Assign Reviewers for PR \#{0} to {1}', github.event.pull_request.number, github.base_ref) }}
 
 on: 
   pull_request:
-    branches:
-      - '**'
-
+    types: [opened, reopened, synchronize, ready_for_review]
+  pull_request_review:
+    types: [submitted, dismissed]
   workflow_dispatch:
     inputs:
-      yaml_filename:
-        description: 'The filename of the YAML configuration file'
-        required: false
-        default: 'REVIEWERS.yml'
       pr_number:
         description: 'Override the PR number (for testing purposes)'
-      team_name:
-        description: 'The name of the team to assign the reviewers for PR approval'
-        required: false
-        default: 'Team-Test-Creation-A'
-        type: string
 
-permissions:
-  actions: read  
-  contents: read
-  pull-requests: write
+permissions: write-all
 
 jobs:
   assign-reviewers-and-assignees:
     runs-on: ubuntu-latest
-    environment:
+    environment: 
       name: cloud-platform
-
     steps:
       - uses: actions/create-github-app-token@v1
         id: app-token
         with:
           app-id: ${{ vars.APP_ID }}
-          private-key: ${{ secrets.APP_KEY }} 
+          private-key: ${{ secrets.APP_KEY }}
           owner: ${{ github.repository_owner }}
 
-      - name: Check out the repository
-        uses: actions/checkout@v4
-
-      - name: Install js-yaml
-        run: npm install js-yaml
-
-      - name: Read and Assign Reviewers and Assignees
-        uses: actions/github-script@v7
-        env: 
-          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
-          GITHUB_TEAM: ${{ inputs.team_name }}
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
-          script: |
-            const fs = require('fs');
-            const yaml = require('js-yaml');
+          python-version: '3.11'
+  
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install PyYAML PyGithub gitpython
 
-            try {
-              // Get the YAML filename from the input, defaulting to 'REVIEWERS.yml' if not provided
-              const yamlFilename = core.getInput('yaml_filename') || 'REVIEWERS.yml';
-              console,log(`Using YAML file: ${yamlFilename}`);
-
-              // load YAML config
-              let config;
-              try { 
-                config = yaml.load(fs.readFileSync(yamlFilename, 'utf8'));
-              } catch (error) {
-                core.setFailed(`Error reading ${yamlFilename}: ${error.message}`);
-                return;
-              }
-
-              // Check if the config has the new structure
-              if (!config.pull_request || !config.pull_requests.branches) {
-              core.setFailed( `The ${yamlFilename} file dose not have the expected structure. Make sure it contains a `pull_request.branches' key.`);
-              return;
-              }
-
-              // get the PR number, using the override if provided
-              const prNumberOverride = core.getInput('pr_number');
-              let pull_number;
-              let prCreator;
-              let targetBranch;
-
-              if (prNumberOverride) {
-                pull_number = parseInt(prNumberOverride);
-                console.log(`Using override PR number: ${pull_number}`);
-                
-                // Fetch PR details when using override
-                try {
-                  const { data: pullRequest } = await github.rest.pulls.get({
-                    owner: context.repo.owner,
-                    repo: context.repo.repo,
-                    pull_number: pull_number
-                  });
-                  prCreator = pullRequest.user.login;
-                  targetBranch = pullRequest.base.ref;
-                } catch (error) {
-                  core.setFailed(`Error fetching PR details: ${error.message}`);
-                  return;
-                }
-              } else if (context.payload.pull_request {
-                pull_number = context.payload.pull_request.number;
-                prCreator = context.payload.pull_request.user.login;
-                targetBranch = context.payload.pull_request.base.ref;
-              } else {
-                core.setFailed('Unable to determine PR number. This workflow should be triggered by a pull request or called with a PR number.');
-                return;
-              }
-
-              console.log(`PR Creator: ${prCreator}`);
-              console.log(`Processing PR #{pull_number} targeting branch: ${targetBranch}`);
-
-              // Find matching pattern and check for exclusions
-              let reviewers = [];
-              let teamReviewers = [];
-              let assignees = [];
-              let configured = false; 
-
-              for (let branchPattern in config.pull_request.branches) {
-                const branchConfig = config.pull_request.branches[branchPattern];
-                
-                // Use wildcard matching for branches
-                const regex = new RegExp('^' + branchPattern.replace('*','.*') + '$');
-                if (regex.test(targetBranch)) {
-                // Check if the branch is excluded
-                if (branchConfig.exclude && branchConfig.exclude.includes(targetBranch)) {
-                  console.log(`Branch ${targetBranch} is excluded from the ${branchPattern} pattern.`);
-                  return;
-                }
-                
-                reviewers = branchConfig.reviewers || [];
-                teamReviewers = branchConfig.team_reviewers || [];
-                assignees = branchConfig.assignees || [];
-                configured = true;
-                break;
-              }
-            }
-            
-            if (!configured) {
-              console.log(`No configuration found for branch ${targetBranch}.`);
-              return;
-            }
-
-            // Filter out the PR creator from the reviewers list
-            reviewers = reviewers.filter(reviewer => reviewer.toLowerCase() !== prCreator.toLowerCase());
-            console.log(`Filtered reviewers: ${reviewers.join(', ')}`);
-
-            // Make the API request to assign reviewers
-            const owner = context.repo.owner;
-            const repo = context.repo.repo;
-
-            if (reviewers.length > 0 || teamReviewers.length > 0) {
-              try {
-                await github.rest.pulls.requestReviewers({
-                  owner: owner,
-                  repo: repo,
-                  pull_number: pull_number,
-                  reviewers: reviewers,
-                  team_reviewers: teamReviewers
-                });
-                console.log(`Assigned reviewers reviewers`);
-              } catch (error) {
-                core.setFailed(`Error assigning reviewers: ${error.message}`);
-                return;
-              }
-            } else {
-              console.log('No reviewers to assign after filtering out PR creator.');
-            }
-
-            // Make the API request to assign assignees ( supports multiple assignees, PR creator is not filtered out)
-            if (assignees.length > 0) {
-              try {
-                await github.rest.issues.addAssignees({
-                  owner: owner,
-                  repo: repo,
-                  issue_number: pull_number,
-                  assignees: assignees
-                });
-                console.log(`Successfully assignees assignees`);
-              } catch (error) {
-                core.setFailed(`Error assigning assignees: ${error.message}`);
-                return;
-              }
-            } else {
-              console.log('No assignees to assign.');
-            }
-
-            console.log(`Assigned reviewers: ${reviewers.join(', ')}`);
-            console.log(`Assigned team reviewers: ${teamReviewers.join(', ')}`);
-            console.log(`Assigned assignees: ${assignees.join(', ')}`);
-
-            } catch (error) {
-            core.setFailed(`Unexpected error occurred: ${error.message}`);
-            } 
+      - name: Process PR Reviews
+        env:
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token  }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          GITHUB_ORGANIZATION: ${{ github.repository_owner }}
+          TEAM_NAME: 'Team-Test-Creation-A'  # Replace with your team name
+        run: | 
+          python .github/scripts/pr_review_manager.py
+        
