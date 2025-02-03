@@ -11,6 +11,12 @@ body:
         ## Repository Creation Request
         
         Please fill out the details below to request a new repository in our organization.
+        
+        > **Important Guidelines:**
+        > - Repository names must be lowercase
+        > - Use hyphens for spaces
+        > - Maximum 100 characters
+        > - Only alphanumeric characters, periods, hyphens, and underscores allowed
 
   - type: input
     id: repo-name
@@ -29,7 +35,7 @@ body:
       description: Provide a brief description of the repository's purpose
       placeholder: A short description of the project
     validations:
-      required: false
+      required: true
       max-length: 280
 
   - type: dropdown
@@ -47,52 +53,26 @@ body:
     id: branch-protection
     attributes:
       label: Branch Protection Settings
-      description: Configure initial branch protection rules
+      description: Configure initial branch protection rules (at least one option required)
       options:
         - label: Enforce for administrators
         - label: Require status checks before merging
         - label: Require 1 pull request review before merging
-
-  - type: textarea
-    id: collaborators
-    attributes:
-      label: Collaborators
-      description: List GitHub usernames of initial collaborators (one per line)
-      placeholder: |
-        github-username1
-        github-username2
     validations:
-      required: false
+      required: true
 
   - type: textarea
     id: teams
     attributes:
-      label: Teams
+      label: Teams (Optional)
       description: List GitHub team names to grant access (one per line)
       placeholder: |
         team-name1
         team-name2
-    validations:
-      required: false
 
   - type: textarea
     id: additional-notes
     attributes:
-      label: Additional Notes
+      label: Additional Notes (Optional)
       description: Provide any additional context or specific requirements
       placeholder: Any extra information about the repository
-    validations:
-      required: false
-
-  - type: checkboxes
-    id: guidelines-acknowledgement
-    attributes:
-      label: Guidelines
-      description: Please confirm you've followed our repository naming guidelines
-      options:
-        - label: Repository name is lowercase
-        - label: Used hyphens for spaces
-        - label: Maximum 100 characters
-        - label: Only alphanumeric characters, periods, hyphens, and underscores
-    validations:
-      required: true

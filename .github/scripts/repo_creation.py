@@ -2,7 +2,6 @@ import os
 import sys
 import json
 import logging
-import re
 from github import Github, GithubException
 
 # Import the config generation functions
@@ -69,230 +68,170 @@ def get_github_context():
 
 class RepositoryCreationHandler:
     def __init__(self, github_token, org_name):
-        """
-        Initialize the Repository Creation Handler
-
-        :param github_token: GitHub Personal Access Token
-        :param org_name: GitHub Organization Name
-        """
         self.g = Github(github_token)
         self.org = self.g.get_organization(org_name)
         self.org_name = org_name
 
-    def validate_repository_name(self, name):
+    def parse_issue_body(self, body):
         """
-        Validate repository name according to GitHub naming conventions
-
-        :param name: Repository name to validate
-        :return: tuple(bool, str) - (is_valid, message)
+        Parse issue body into input dictionary with required and optional fields
         """
-        if not name:
-            return False, "Repository name cannot be empty"
-
-        # GitHub repository naming rules
-        if len(name) > 100:
-            return False, "Repository name must be 100 characters or less"
-
-        # Check for valid characters (letters, numbers, hyphens, underscores)
-        if not re.match(r"^[a-zA-Z0-9._-]+$", name):
-            return False, "Repository name can only contain letters, numbers, hyphens, and underscores"
-
-        # Check if repository already exists
-        try:
-            self.org.get_repo(name)
-            return False, f"Repository '{name}' already exists in the organization"
-        except GithubException:
-            pass
-
-        return True, "Repository name is valid"
-
-    def validate_description(self, description):
-        """
-        Validate repository description
-
-        :param description: Repository description to validate
-        :return: tuple(bool, str) - (is_valid, message)
-        """
-        if not description:
-            return False, "Description cannot be empty"
-
-        if len(description) > 350:  # GitHub's description length limit
-            return False, "Description must be 350 characters or less"
-
-        return True, "Description is valid"
-
-    def validate_visibility(self, visibility):
-        """
-        Validate repository visibility setting
-
-        :param visibility: Desired visibility setting
-        :return: tuple(bool, str) - (is_valid, message)
-        """
-        valid_values = ["private", "public"]
-        if not visibility.lower() in valid_values:
-            return False, "Visibility must be either 'private' or 'public'"
-        return True, "Visibility setting is valid"
-
-    def generate_validation_comment(self, validation_results):
-        """
-        Generate a comment with validation feedback
-
-        :param validation_results: Dictionary of validation results
-        :return: str - Formatted comment
-        """
-        comment = "## ❌ Validation Failed\n\nPlease fix the following issues:\n\n"
-
-        for field, (is_valid, message) in validation_results.items():
-            if not is_valid:
-                comment += f"- **{field.title()}**: {message}\n"
-
-        comment += "\nPlease update the issue with corrected information."
-        return comment
-
-    def generate_repository_config(self, input_data):
-        """
-        Generate repository configuration from input data
-
-        :param input_data: Dictionary of repository inputs
-        :return: Dictionary of repository configuration
-        """
-        return {
-            "name": input_data.get("repo-name", ""),
-            "description": input_data.get("description", ""),
-            "visibility": input_data.get("visibility", "private"),
-            "collaborators": input_data.get("collaborators", "").split("\n") if input_data.get("collaborators") else [],
-            "teams": input_data.get("teams", "").split("\n") if input_data.get("teams") else [],
+        input_data = {
+            'required': {},
+            'optional': {},
+            'branch_protection': []
         }
+        
+        lines = body.split('\n')
+        current_section = None
+        current_data = []
 
-    def create_repository(self, input_data):
+        for line in lines:
+            line = line.strip()
+            
+            # Skip empty lines and markdown section
+            if not line or line.startswith('##'):
+                continue
+
+            # Handle section headers (identified by form field labels)
+            if line.endswith(':') or line.endswith(' (Optional):'):
+                if current_section and current_data:
+                    self._process_section(current_section, current_data, input_data)
+                current_section = line.replace(':', '').replace(' (Optional)', '').lower()
+                current_data = []
+                continue
+
+            # Collect checkbox selections for branch protection
+            if line.startswith('- [x]'):
+                if current_section == 'branch protection settings':
+                    input_data['branch_protection'].append(line[5:].strip())
+            # Collect regular input data
+            elif line and not line.startswith('-'):
+                current_data.append(line)
+
+        # Process the last section
+        if current_section and current_data:
+            self._process_section(current_section, current_data, input_data)
+
+        return input_data
+
+    def _process_section(self, section, data, input_data):
+        """Helper method to process each section of the issue form"""
+        clean_data = [line for line in data if line and not line.startswith('>')]
+        if not clean_data:
+            return
+
+        value = '\n'.join(clean_data) if len(clean_data) > 1 else clean_data[0]
+        
+        # Map sections to required or optional fields
+        required_fields = {
+            'repository name': 'repo_name',
+            'repository description': 'description',
+            'repository visibility': 'visibility'
+        }
+        
+        optional_fields = {
+            'teams': 'teams',
+            'additional notes': 'notes'
+        }
+        
+        section = section.lower()
+        if section in required_fields:
+            input_data['required'][required_fields[section]] = value
+        elif section in optional_fields:
+            input_data['optional'][optional_fields[section]] = value
+
+    def validate_input(self, input_data):
         """
-        Create repository and generate configuration file
-
-        :param input_data: Dictionary of repository creation inputs
-        :return: Created repository object
+        Validate all required inputs and return validation results
         """
-        try:
-            # Prepare repository creation parameters
-            repo_params = {
-                "name": input_data.get("name", ""),
-                "description": input_data.get("description", ""),
-                "private": input_data.get("visibility", "Private").lower() == "private",
-                "auto_init": True,
-            }
+        validation_results = {}
+        
+        # Validate required fields
+        required_fields = {
+            'repo_name': self.validate_repository_name,
+            'description': self.validate_description,
+            'visibility': self.validate_visibility
+        }
+        
+        for field, validator in required_fields.items():
+            if field not in input_data['required']:
+                validation_results[field] = (False, f"{field.replace('_', ' ').title()} is required")
+            else:
+                validation_results[field] = validator(input_data['required'][field])
+        
+        # Validate branch protection settings
+        if not input_data['branch_protection']:
+            validation_results['branch_protection'] = (False, "At least one branch protection option must be selected")
+        else:
+            validation_results['branch_protection'] = (True, "Branch protection settings are valid")
+        
+        return validation_results
 
-            # Create repository in GitHub
-            repo = self.org.create_repo(**repo_params)
-
-            # Generate repository configuration
-            config = generate_repository_config(
-                {
-                    "name": repo.name,
-                    "description": repo.description,
-                    "private": repo.private,
-                    "collaborators": (
-                        input_data.get("collaborators", "").split("\n") if input_data.get("collaborators") else []
-                    ),
-                    "teams": input_data.get("teams", "").split("\n") if input_data.get("teams") else [],
-                }
-            )
-
-            # Save configuration file
-            config_path = save_repository_config(repo.name, config)
-
-            # Optional: Commit configuration file to the repository
-            with open(config_path, "r") as config_file:
-                config_content = config_file.read()
-                repo.create_file(
-                    path=".github/repo_config.yml",
-                    message="Add initial repository configuration",
-                    content=config_content,
-                )
-
-            return repo
-
-        except Exception as e:
-            logging.error(f"Repository creation error: {e}")
-            return None
-
-    def process_issue(self, issue, event_payload):
+    def process_issue(self, issue):
         """
-        Process repository creation issue
-
-        :param issue: GitHub Issue object
-        :param event_payload: Event payload dictionary
+        Process repository creation issue with improved validation and feedback
         """
         logging.info(f"Processing issue #{issue.number}")
 
         # Parse issue body
         input_data = self.parse_issue_body(issue.body)
-
+        
         # Validate inputs
-        validation_results = {
-            "name": self.validate_repository_name(input_data.get("repo-name", "")),
-            "description": self.validate_description(input_data.get("description", "")),
-        }
-
-        # Log validation results
-        logging.debug("Validation Results:")
-        for key, (is_valid, message) in validation_results.items():
-            logging.debug(f"{key}: Valid={is_valid}, Message={message}")
+        validation_results = self.validate_input(input_data)
 
         # Check if all validations passed
         if all(result[0] for result in validation_results.values()):
-            # Generate and create repository
+            # Generate repository configuration
             config = self.generate_repository_config(input_data)
             repo = self.create_repository(config)
 
             if repo:
-                # Success comment
-                success_comment = f"""
-## 🎉 Repository Created Successfully!
-
-Repository **{repo.full_name}** created:
-- Name: {repo.name}
-- Description: {repo.description}
-- Visibility: {'Private' if repo.private else 'Public'}
-
-Configuration: `.github/repo_settings.yml`
-
-[View Repository]({repo.html_url})
-"""
-                issue.create_comment(success_comment)
+                self._post_success_comment(issue, repo, input_data)
                 issue.edit(state="closed")
                 logging.info(f"Repository {repo.name} created successfully")
             else:
-                # Creation failed
-                issue.create_comment("❌ **Repository Creation Failed**\nContact administrator.")
+                self._post_error_comment(issue)
                 logging.error("Repository creation failed")
         else:
-            # Validation failed
             feedback_comment = self.generate_validation_comment(validation_results)
             issue.create_comment(feedback_comment)
             logging.warning("Repository creation validation failed")
 
-    def parse_issue_body(self, body):
-        """
-        Parse issue body into input dictionary
-        """
-        input_data = {}
-        current_section = None
+    def _post_success_comment(self, issue, repo, input_data):
+        """Post a detailed success comment"""
+        success_comment = f"""
+## 🎉 Repository Created Successfully!
 
-        for line in body.split("\n"):
-            line = line.strip()
+**Repository Details:**
+- Name: [{repo.name}]({repo.html_url})
+- Description: {repo.description}
+- Visibility: {'Private' if repo.private else 'Public'}
+- Branch Protection: Enabled
+- Teams Added: {', '.join(input_data['optional'].get('teams', '').split()) or 'None'}
 
-            # Handle section headers
-            if line.startswith("### "):
-                current_section = line[4:].lower().replace(" ", "_")
-                continue
+Configuration files have been created at:
+- `.github/repo_settings.yml`
 
-            # Parse key-value pairs
-            if ":" in line and current_section:
-                key, value = line.split(":", 1)
-                input_data[current_section] = value.strip()
+You can now clone your repository and start working:
+```bash
+git clone {repo.clone_url}
+```
+"""
+        issue.create_comment(success_comment)
 
-        logging.debug(f"Parsed Input Data: {input_data}")
-        return input_data
+    def _post_error_comment(self, issue):
+        """Post an error comment"""
+        error_comment = """
+## ❌ Repository Creation Failed
 
+There was an error while creating the repository. Please contact an administrator for assistance.
+
+Please provide the following details when seeking help:
+- Issue number: #{issue.number}
+- Timestamp: {datetime.now().isoformat()}
+"""
+        issue.create_comment(error_comment)
 
 def get_current_repository(g, full_repo_name):
     """
@@ -340,7 +279,7 @@ def main():
 
             # Process the issue
             handler = RepositoryCreationHandler(context["token"], context["organization"])
-            handler.process_issue(issue, event_payload)
+            handler.process_issue(issue)
         else:
             logging.error("No issue number found in the event payload")
             sys.exit(1)
