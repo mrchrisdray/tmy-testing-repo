@@ -1,6 +1,4 @@
 import os
-import re
-import yaml
 import sys
 import json
 import logging
@@ -210,6 +208,26 @@ Configuration: `.github/repo_settings.yml`
         return input_data
 
 
+def get_current_repository(g, full_repo_name):
+    """
+    Get the current repository where the action is running.
+    
+    Args:
+        g: Github instance
+        full_repo_name: Full repository name (org/repo format)
+    
+    Returns:
+        github.Repository.Repository: Repository object
+    """
+    try:
+        repo = g.get_repo(full_repo_name)
+        logging.info(f"Using current repository: {full_repo_name}")
+        return repo
+    except GithubException as e:
+        logging.error(f"Error accessing current repository: {e}")
+        sys.exit(1)
+
+
 def main():
     # Get GitHub context and event payload
     context, event_payload = get_github_context()
@@ -219,28 +237,20 @@ def main():
         logging.error("GitHub token not found")
         sys.exit(1)
 
-    if not context["organization"]:
-        logging.error("Organization could not be determined")
+    if not context["repository"]:
+        logging.error("Repository could not be determined")
         sys.exit(1)
 
     # Initialize GitHub instance
     g = Github(context["token"])
 
     try:
-        # Determine repository containing issues
-        org_repos = list(g.get_organization(context["organization"]).get_repos())
-        logging.debug(f"Organization repositories: {[repo.name for repo in org_repos]}")
-
-        # Try to find the .github repository
-        github_repo = next((repo for repo in org_repos if repo.name == ".github"), None)
-
-        if not github_repo:
-            logging.error("No .github repository found in the organization")
-            sys.exit(1)
+        # Get the current repository where the action is running
+        current_repo = get_current_repository(g, context["repository"])
 
         # Retrieve issue
         if context["issue_number"]:
-            issue = github_repo.get_issue(context["issue_number"])
+            issue = current_repo.get_issue(context["issue_number"])
 
             # Process the issue
             handler = RepositoryCreationHandler(context["token"], context["organization"])
@@ -252,7 +262,6 @@ def main():
     except Exception as e:
         logging.error(f"Error processing repository creation: {e}", exc_info=True)
         sys.exit(1)
-
 
 if __name__ == "__main__":
     main()
