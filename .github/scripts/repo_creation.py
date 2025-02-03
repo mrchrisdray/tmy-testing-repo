@@ -211,11 +211,11 @@ Configuration: `.github/repo_settings.yml`
 def get_current_repository(g, full_repo_name):
     """
     Get the current repository where the action is running.
-    
+
     Args:
         g: Github instance
         full_repo_name: Full repository name (org/repo format)
-    
+
     Returns:
         github.Repository.Repository: Repository object
     """
@@ -262,6 +262,7 @@ def main():
     except Exception as e:
         logging.error(f"Error processing repository creation: {e}", exc_info=True)
         sys.exit(1)
+
 
 if __name__ == "__main__":
     main()
