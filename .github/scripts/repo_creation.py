@@ -2,6 +2,7 @@ import os
 import sys
 import json
 import logging
+import re
 from github import Github, GithubException
 
 # Import the config generation functions
@@ -77,6 +78,91 @@ class RepositoryCreationHandler:
         self.g = Github(github_token)
         self.org = self.g.get_organization(org_name)
         self.org_name = org_name
+
+    def validate_repository_name(self, name):
+        """
+        Validate repository name according to GitHub naming conventions
+        
+        :param name: Repository name to validate
+        :return: tuple(bool, str) - (is_valid, message)
+        """
+        if not name:
+            return False, "Repository name cannot be empty"
+        
+        # GitHub repository naming rules
+        if len(name) > 100:
+            return False, "Repository name must be 100 characters or less"
+            
+        # Check for valid characters (letters, numbers, hyphens, underscores)
+        if not re.match(r'^[a-zA-Z0-9._-]+$', name):
+            return False, "Repository name can only contain letters, numbers, hyphens, and underscores"
+            
+        # Check if repository already exists
+        try:
+            self.org.get_repo(name)
+            return False, f"Repository '{name}' already exists in the organization"
+        except GithubException:
+            pass
+            
+        return True, "Repository name is valid"
+
+    def validate_description(self, description):
+        """
+        Validate repository description
+        
+        :param description: Repository description to validate
+        :return: tuple(bool, str) - (is_valid, message)
+        """
+        if not description:
+            return False, "Description cannot be empty"
+            
+        if len(description) > 350:  # GitHub's description length limit
+            return False, "Description must be 350 characters or less"
+            
+        return True, "Description is valid"
+
+    def validate_visibility(self, visibility):
+        """
+        Validate repository visibility setting
+        
+        :param visibility: Desired visibility setting
+        :return: tuple(bool, str) - (is_valid, message)
+        """
+        valid_values = ['private', 'public']
+        if not visibility.lower() in valid_values:
+            return False, "Visibility must be either 'private' or 'public'"
+        return True, "Visibility setting is valid"
+
+    def generate_validation_comment(self, validation_results):
+        """
+        Generate a comment with validation feedback
+        
+        :param validation_results: Dictionary of validation results
+        :return: str - Formatted comment
+        """
+        comment = "## ❌ Validation Failed\n\nPlease fix the following issues:\n\n"
+        
+        for field, (is_valid, message) in validation_results.items():
+            if not is_valid:
+                comment += f"- **{field.title()}**: {message}\n"
+                
+        comment += "\nPlease update the issue with corrected information."
+        return comment
+
+    def generate_repository_config(self, input_data):
+        """
+        Generate repository configuration from input data
+        
+        :param input_data: Dictionary of repository inputs
+        :return: Dictionary of repository configuration
+        """
+        return {
+            "name": input_data.get("repo-name", ""),
+            "description": input_data.get("description", ""),
+            "visibility": input_data.get("visibility", "private"),
+            "collaborators": input_data.get("collaborators", "").split("\n") if input_data.get("collaborators") else [],
+            "teams": input_data.get("teams", "").split("\n") if input_data.get("teams") else []
+        }
 
     def create_repository(self, input_data):
         """
