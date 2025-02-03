@@ -76,37 +76,33 @@ class RepositoryCreationHandler:
         """
         Parse issue body into input dictionary with required and optional fields
         """
-        input_data = {
-            'required': {},
-            'optional': {},
-            'branch_protection': []
-        }
-        
-        lines = body.split('\n')
+        input_data = {"required": {}, "optional": {}, "branch_protection": []}
+
+        lines = body.split("\n")
         current_section = None
         current_data = []
 
         for line in lines:
             line = line.strip()
-            
+
             # Skip empty lines and markdown section
-            if not line or line.startswith('##'):
+            if not line or line.startswith("##"):
                 continue
 
             # Handle section headers (identified by form field labels)
-            if line.endswith(':') or line.endswith(' (Optional):'):
+            if line.endswith(":") or line.endswith(" (Optional):"):
                 if current_section and current_data:
                     self._process_section(current_section, current_data, input_data)
-                current_section = line.replace(':', '').replace(' (Optional)', '').lower()
+                current_section = line.replace(":", "").replace(" (Optional)", "").lower()
                 current_data = []
                 continue
 
             # Collect checkbox selections for branch protection
-            if line.startswith('- [x]'):
-                if current_section == 'branch protection settings':
-                    input_data['branch_protection'].append(line[5:].strip())
+            if line.startswith("- [x]"):
+                if current_section == "branch protection settings":
+                    input_data["branch_protection"].append(line[5:].strip())
             # Collect regular input data
-            elif line and not line.startswith('-'):
+            elif line and not line.startswith("-"):
                 current_data.append(line)
 
         # Process the last section
@@ -117,55 +113,52 @@ class RepositoryCreationHandler:
 
     def _process_section(self, section, data, input_data):
         """Helper method to process each section of the issue form"""
-        clean_data = [line for line in data if line and not line.startswith('>')]
+        clean_data = [line for line in data if line and not line.startswith(">")]
         if not clean_data:
             return
 
-        value = '\n'.join(clean_data) if len(clean_data) > 1 else clean_data[0]
-        
+        value = "\n".join(clean_data) if len(clean_data) > 1 else clean_data[0]
+
         # Map sections to required or optional fields
         required_fields = {
-            'repository name': 'repo_name',
-            'repository description': 'description',
-            'repository visibility': 'visibility'
+            "repository name": "repo_name",
+            "repository description": "description",
+            "repository visibility": "visibility",
         }
-        
-        optional_fields = {
-            'teams': 'teams',
-            'additional notes': 'notes'
-        }
-        
+
+        optional_fields = {"teams": "teams", "additional notes": "notes"}
+
         section = section.lower()
         if section in required_fields:
-            input_data['required'][required_fields[section]] = value
+            input_data["required"][required_fields[section]] = value
         elif section in optional_fields:
-            input_data['optional'][optional_fields[section]] = value
+            input_data["optional"][optional_fields[section]] = value
 
     def validate_input(self, input_data):
         """
         Validate all required inputs and return validation results
         """
         validation_results = {}
-        
+
         # Validate required fields
         required_fields = {
-            'repo_name': self.validate_repository_name,
-            'description': self.validate_description,
-            'visibility': self.validate_visibility
+            "repo_name": self.validate_repository_name,
+            "description": self.validate_description,
+            "visibility": self.validate_visibility,
         }
-        
+
         for field, validator in required_fields.items():
-            if field not in input_data['required']:
+            if field not in input_data["required"]:
                 validation_results[field] = (False, f"{field.replace('_', ' ').title()} is required")
             else:
-                validation_results[field] = validator(input_data['required'][field])
-        
+                validation_results[field] = validator(input_data["required"][field])
+
         # Validate branch protection settings
-        if not input_data['branch_protection']:
-            validation_results['branch_protection'] = (False, "At least one branch protection option must be selected")
+        if not input_data["branch_protection"]:
+            validation_results["branch_protection"] = (False, "At least one branch protection option must be selected")
         else:
-            validation_results['branch_protection'] = (True, "Branch protection settings are valid")
-        
+            validation_results["branch_protection"] = (True, "Branch protection settings are valid")
+
         return validation_results
 
     def process_issue(self, issue):
@@ -176,7 +169,7 @@ class RepositoryCreationHandler:
 
         # Parse issue body
         input_data = self.parse_issue_body(issue.body)
-        
+
         # Validate inputs
         validation_results = self.validate_input(input_data)
 
@@ -232,6 +225,7 @@ Please provide the following details when seeking help:
 - Timestamp: {datetime.now().isoformat()}
 """
         issue.create_comment(error_comment)
+
 
 def get_current_repository(g, full_repo_name):
     """
